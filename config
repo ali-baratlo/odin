@@ -1,0 +1,13 @@
+
+#POSTGRES_USER = odin
+#POSTGRES_PASSWORD = odin
+#POSTGRES_DB = odin
+
+#--------------------------------------------------
+DB_HOST=db
+DB_PORT_NUM=5432
+DB_USER=odin
+DB_PASSWORD=os.getenv("DB_PASSWORD", "odin")
+DB_NAME=odin
+DB_SERVICE_PORT=5432
+#-------------------------------------------------

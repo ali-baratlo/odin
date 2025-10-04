@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: odin_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: 'odin'
+      POSTGRES_PASSWORD: 'odin'
+      POSTGRES_DB: 'odin'
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - odin_net
+
+  web:
+    image: odin_test:0.0.4
+    container_name: odin_app
+    environment:
+      DATABASE_URL: postgres://odin:odin@db:5432/odin
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      - postgres
+    ports:
+      - "8000:8000"
+    networks:
+      - odin_net
+
+
+networks:
+  odin_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

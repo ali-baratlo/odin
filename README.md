@@ -1,2 +1,2 @@
-# odin
-odin (okd resource inspector)
+Odin ( OKD Resource Collector and Inspector ) :
+This project is designed to collect, store, inspect, and compare various Kubernetes resources (such as ConfigMaps, Secrets, Deployments, Services, etc.) from multiple OKD4 clusters (Teh1 or Teh2). The goal is to create a system that can identify inconsistencies and changes across resources between different environments in a structured and accessible way.
