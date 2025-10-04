@@ -48,7 +48,12 @@ Odin is a powerful, containerized application designed to collect, store, and in
     - name: my-cluster-2
       api_server: https://api.my-cluster-2.com:6443
       token_env: MY_CLUSTER_2_TOKEN
+      # Optional: Only scan namespaces with a specific label
+      # The format is a standard Kubernetes label selector string.
+      namespace_label_selector: "environment=production"
     ```
+
+    You can use the `namespace_label_selector` field to restrict the resource collection to only namespaces that match the specified label. If omitted, all namespaces will be scanned.
 
 3.  **Set Environment Variables:**
 

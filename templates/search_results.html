@@ -24,16 +24,6 @@
             color: #6BE56B; /* Green color for headers */
         }
 
-        /*/* Logo Styles */
-        /*.logo {
-        /*    max-width: 150px; /* اندازه حداکثری لوگو */
-        /*    height: auto; /* حفظ نسبت ابعاد */
-        /*    margin-bottom: 20px; /* فاصله از پایین */
-        /*    display: block; /* برای اینکه margin auto کار کنه */
-        /*    margin-left: auto; /* برای وسط چین کردن */
-        /*    margin-right: auto; /* برای وسط چین کردن */
-        /*}
-
         /* Search Form Styles */
         .search-form {
             display: flex;
@@ -137,66 +127,43 @@
             margin-bottom: 20px;
         }
 
-        /* Styles for Code Block and Highlighting */
+        /* Styles for Code Block */
         .code-block {
             background-color: #202020; /* Even darker for code block */
             color: #e0e0e0; /* Light text */
-            padding: 15px; /* More padding */
+            padding: 15px;
             border-radius: 6px;
             overflow-x: auto;
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            font-size: 0.95em; /* Slightly larger font */
-            max-height: 350px; /* Adjusted max height */
-            border: 1px solid #3a3a3a; /* Darker, subtle border */
+            font-size: 0.95em;
+            max-height: 400px;
+            border: 1px solid #3a3a3a;
             margin-top: 15px;
         }
-        .code-line {
-            display: flex;
-            line-height: 1.6; /* Slightly more line height */
-            padding: 2px 0;
-        }
-        .line-number {
-            color: #90EE90; /* Lighter green for line numbers */
-            padding-right: 18px; /* More space */
-            text-align: right;
-            min-width: 40px; /* Ensure enough space */
-        }
-        .line-text {
-            flex-grow: 1;
-            word-break: break-all;
+        pre {
+            margin: 0;
             white-space: pre-wrap;
+            word-break: break-all;
         }
-        .highlight {
-            background-color: #FFEB3B; /* Brighter yellow highlight */
-            color: #202020; /* Dark text for strong contrast */
-            padding: 1px 4px; /* Slightly more padding for highlight */
-            border-radius: 3px;
-            font-weight: bold;
-        }
-            /* Footer Styles */
-            .footer {
-            margin-top: 40px; /* Space above the footer */
+
+        /* Footer Styles */
+        .footer {
+            margin-top: 40px;
             padding: 20px;
             text-align: center;
-            font-size: 0.85em; /* Smaller font size */
-            color: #888; /* Lighter grey text */
-            background-color: #202020; /* Dark background, slightly different from body */
-            border-top: 1px solid #444; /* A subtle separator line */
-            position: relative; /* If you want to absolutely position it at the bottom of the viewport */
-            bottom: 0;
-            width: 100%; /* Spans full width */
-            box-sizing: border-box; /* Include padding/border in width calculation */
+            font-size: 0.85em;
+            color: #888;
+            background-color: #202020;
+            border-top: 1px solid #444;
         }
-
         .footer a {
-            color: #6BE56B; /* Green color for the link */
-            text-decoration: none; /* Remove underline */
+            color: #6BE56B;
+            text-decoration: none;
             transition: color 0.2s ease;
         }
-
         .footer a:hover {
-            color: #4CAF50; /* Darker green on hover */
-            text-decoration: underline; /* Underline on hover */
+            color: #4CAF50;
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -206,27 +173,19 @@
 
         <form action="/search" method="get" class="search-form">
             <div class="form-row">
-                <select name="cluster_name" id="cluster_name_select" required>
-                    <option value="all">All Clusters</option>
-                    <option value="Teh1" {% if request.query_params.get('cluster_name') == 'Teh1' %}selected{% endif %}>Teh1</option>
-                    <option value="Teh2" {% if request.query_params.get('cluster_name') == 'Teh2' %}selected{% endif %}>Teh2</option>
+                <select name="cluster_name" id="cluster_name_select">
+                    <option value="">All Clusters</option>
                 </select>
-
-                <select name="namespace" id="namespace_select" required>
-                    <option value="all">All Namespaces</option>
-                    </select>
-
-                <select name="resource_type" id="resource_type_select" required>
-                    <option value="all">All Resource Types</option>
-                    <option value="configmap" {% if request.query_params.get('resource_type') == 'configmap' %}selected{% endif %}>configmap</option>
+                <select name="namespace" id="namespace_select">
+                    <option value="">All Namespaces</option>
                 </select>
-
+                <select name="resource_type" id="resource_type_select">
+                    <option value="">All Resource Types</option>
+                </select>
                 <input type="text" name="resource_name" placeholder="Resource Name (Optional)" value="{{ request.query_params.get('resource_name', '') }}">
             </div>
-
             <div class="form-row">
-                <input type="text" name="keyword" placeholder="Keyword to search" value="{{ request.query_params.get('keyword', '') }}" required class="search-keyword-input">
-                
+                <input type="text" name="keyword" placeholder="Keyword to search" value="{{ request.query_params.get('keyword', '') }}" class="search-keyword-input">
                 <button type="submit">Search</button>
             </div>
         </form>
@@ -235,60 +194,41 @@
             <p class="error-message">Error: {{ error }}</p>
         {% endif %}
 
-        {% if results %}
-            <p class="results-summary">Found {{ total_matches }} matching resources for keyword: "<strong>{{ keyword }}</strong>"</p>
-            {% for resource in results %}
+        {% if results is defined and results %}
+            <p class="results-summary">Found {{ total_matches }} matching resources for keyword: "<strong>{{ keyword or 'any' }}</strong>"</p>
+            {% for result in results %}
                 <div class="resource-card">
-                    <h3>{{ resource.resource_name }} ({{ resource.resource_type }})</h3>
-                    <p><strong>Cluster:</strong> {{ resource.cluster_name }}</p>
-                    <p><strong>Namespace:</strong> {{ resource.namespace }}</p>
-                    <h4>Matches:</h4>
-                    {% if resource.matched_lines %}
-                        <div class="code-block">
-                            {% for line_match in resource.matched_lines %}
-                                <div class="code-line">
-                                    <span class="line-number">{{ line_match.line_number }}</span>
-                                    <span class="line-text">{{ line_match.highlighted_text | safe }}</span>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <p>No specific matches found for this resource.</p>
-                    {% endif %}
+                    <h3>{{ result.resource_name }} ({{ result.resource_type }})</h3>
+                    <p><strong>Cluster:</strong> {{ result.cluster_name }}</p>
+                    <p><strong>Namespace:</strong> {{ result.namespace }}</p>
+                    <h4>Data:</h4>
+                    <div class="code-block">
+                        <pre><code>{{ result.pretty_data }}</code></pre>
+                    </div>
                 </div>
             {% endfor %}
-        {% elif keyword %}
-            <p>No results found for keyword: "<strong>{{ keyword }}</strong>". Please try a different search.</p>
+        {% elif request.query_params.get('keyword') %}
+            <p>No results found for keyword: "<strong>{{ request.query_params.get('keyword') }}</strong>". Please try a different search.</p>
         {% endif %}
     </div>
 
     <footer class="footer">
-        Powered by 
-        SRE</a> | 
-        <a href="https://gitlab.snapp.ir/sre" target="_blank" rel="noopener noreferrer">Github</a> | 
+        Powered by SRE |
+        <a href="https://gitlab.snapp.ir/sre" target="_blank" rel="noopener noreferrer">GitLab</a> |
         <a href="https://confluence.snapp.ir/x/GAQLBQ" target="_blank" rel="noopener noreferrer">Confluence</a>
     </footer>
 
-
     <script>
-        // Function to load options into a select element
         async function loadSelectOptions(selectId, apiUrl, selectedValue) {
             const selectElement = document.getElementById(selectId);
             try {
                 const response = await fetch(apiUrl);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const data = await response.json();
                 
-                // Keep the "All" option if it exists
-                const allOption = selectElement.querySelector('option[value="all"]');
-                if (allOption) {
-                    selectElement.innerHTML = ''; // Clear existing options except for 'All'
-                    selectElement.appendChild(allOption);
-                } else {
-                    selectElement.innerHTML = ''; // Clear all existing options
-                }
+                const defaultOption = selectElement.querySelector('option');
+                selectElement.innerHTML = '';
+                selectElement.appendChild(defaultOption);
 
                 data.forEach(item => {
                     const option = document.createElement('option');
@@ -300,43 +240,19 @@
                     selectElement.appendChild(option);
                 });
             } catch (error) {
-                console.error(`Error loading options for ${selectId} from ${apiUrl}:`, error);
-                // Optionally add a disabled error option
-                const errorOption = document.createElement('option');
-                errorOption.value = "";
-                errorOption.textContent = `Error loading ${selectId}`;
-                errorOption.disabled = true;
-                selectElement.appendChild(errorOption);
+                console.error(`Error loading options for ${selectId}:`, error);
             }
         }
 
-        // Get currently selected values from URL query parameters (for re-selecting after page load)
-        const urlParams = new URLSearchParams(window.location.search);
-        const selectedNamespace = urlParams.get('namespace');
-        const selectedClusterName = urlParams.get('cluster_name');
-        const selectedResourceType = urlParams.get('resource_type');
-
-
-        // Load options when the page loads
         document.addEventListener('DOMContentLoaded', () => {
-            // Load Namespaces dynamically
-            loadSelectOptions('namespace_select', '/filters/namespaces', selectedNamespace);
-            
-            // For ClusterName and ResourceType, you have Literal types in Python.
-            // If you want them dynamic too, uncomment these and adjust your Python `Literal` definitions.
-            loadSelectOptions('cluster_name_select', '/filters/cluster_names', selectedClusterName);
-            // loadSelectOptions('resource_type_select', '/filters/resource_types', selectedResourceType);
+            const urlParams = new URLSearchParams(window.location.search);
+            const selectedCluster = urlParams.get('cluster_name');
+            const selectedNamespace = urlParams.get('namespace');
+            const selectedResourceType = urlParams.get('resource_type');
 
-            // Re-select values for Literals if they were hardcoded in options but need to be re-selected
-            // This is for ClusterName and ResourceType where options are hardcoded for Literal types
-            if (selectedClusterName) {
-                const clusterSelect = document.getElementById('cluster_name_select');
-                if (clusterSelect) clusterSelect.value = selectedClusterName;
-            }
-            if (selectedResourceType) {
-                const resourceSelect = document.getElementById('resource_type_select');
-                if (resourceSelect) resourceSelect.value = selectedResourceType;
-            }
+            loadSelectOptions('cluster_name_select', '/filters/cluster_names', selectedCluster);
+            loadSelectOptions('namespace_select', '/filters/namespaces', selectedNamespace);
+            loadSelectOptions('resource_type_select', '/filters/resource_types', selectedResourceType);
         });
     </script>
 </body>

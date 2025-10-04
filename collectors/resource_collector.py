@@ -26,6 +26,7 @@ def collect_resources():
         cluster_name = cluster["name"]
         api_server = cluster["api_server"]
         token = cluster["token"]
+        namespace_label_selector = cluster.get("namespace_label_selector", "") # Get the label selector
 
         print(f"\nCollecting from {cluster_name}")
 
@@ -45,9 +46,10 @@ def collect_resources():
         }
 
         try:
-            namespaces = core_v1_api.list_namespace()
+            # Use the label selector to filter namespaces
+            namespaces = core_v1_api.list_namespace(label_selector=namespace_label_selector)
         except Exception as e:
-            print(f"Error fetching namespaces from {cluster_name}: {e}")
+            print(f"Error fetching namespaces from {cluster_name} with selector '{namespace_label_selector}': {e}")
             continue
 
         for ns in namespaces.items:
