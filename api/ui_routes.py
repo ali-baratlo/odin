@@ -34,8 +34,8 @@ def ui_search(
     Handles the UI search functionality by calling the shared query logic.
     """
     try:
-        # Call the shared query logic
-        results_models = endpoints._query_resources(
+        # Call the shared query logic, which returns a list of dictionaries
+        search_results = endpoints._query_resources(
             collection=collection,
             keyword=keyword,
             cluster_name=cluster_name,
@@ -44,8 +44,7 @@ def ui_search(
             resource_name=resource_name
         )
 
-        # Convert models to dicts and add a pretty-printed data field for the template
-        search_results = [res.model_dump() for res in results_models]
+        # The results are already dicts. Just add the pretty-printed data field for the template.
         for result in search_results:
             result['pretty_data'] = json.dumps(result.get('data', {}), indent=2)
 
