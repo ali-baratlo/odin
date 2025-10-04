@@ -4,6 +4,7 @@ from fastapi.responses import HTMLResponse
 from pymongo.collection import Collection
 from api import endpoints
 from utils.db import get_resource_collection
+from utils.presenter import get_structured_data
 from typing import Optional
 import json
 import re
@@ -34,7 +35,7 @@ def ui_search(
 ):
     """
     Handles the UI search functionality by calling the shared query logic
-    and adding highlighting to the results.
+    and preparing data for presentation.
     """
     try:
         search_results = endpoints._query_resources(
@@ -47,15 +48,14 @@ def ui_search(
         )
 
         for result in search_results:
-            # First, get the pretty-printed JSON data
-            pretty_data = json.dumps(result.get('data', {}), indent=2)
+            # Generate structured data for the "Summary" view
+            result['structured_data'] = get_structured_data(result)
 
-            # Escape HTML characters to prevent XSS
+            # Generate highlighted data for the "Raw Data" view
+            pretty_data = json.dumps(result.get('data', {}), indent=2)
             safe_data = html.escape(pretty_data)
 
-            # If a keyword was used, highlight it
             if keyword:
-                # Use re.sub for case-insensitive replacement and wrap with a span
                 highlighted_data = re.sub(
                     f'({re.escape(keyword)})',
                     r'<span class="highlight">\1</span>',
@@ -65,9 +65,6 @@ def ui_search(
                 result['highlighted_data'] = highlighted_data
             else:
                 result['highlighted_data'] = safe_data
-
-            # Also keep the raw data for the ConfigMap view
-            result['pretty_data'] = pretty_data
 
         return templates.TemplateResponse(
             "search_results.html",
