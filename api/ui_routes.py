@@ -6,6 +6,8 @@ from api import endpoints
 from utils.db import get_resource_collection
 from typing import Optional
 import json
+import re
+import html
 
 templates = Jinja2Templates(directory="templates")
 router = APIRouter()
@@ -31,10 +33,10 @@ def ui_search(
     resource_name: Optional[str] = Query(None),
 ):
     """
-    Handles the UI search functionality by calling the shared query logic.
+    Handles the UI search functionality by calling the shared query logic
+    and adding highlighting to the results.
     """
     try:
-        # Call the shared query logic, which returns a list of dictionaries
         search_results = endpoints._query_resources(
             collection=collection,
             keyword=keyword,
@@ -44,9 +46,28 @@ def ui_search(
             resource_name=resource_name
         )
 
-        # The results are already dicts. Just add the pretty-printed data field for the template.
         for result in search_results:
-            result['pretty_data'] = json.dumps(result.get('data', {}), indent=2)
+            # First, get the pretty-printed JSON data
+            pretty_data = json.dumps(result.get('data', {}), indent=2)
+
+            # Escape HTML characters to prevent XSS
+            safe_data = html.escape(pretty_data)
+
+            # If a keyword was used, highlight it
+            if keyword:
+                # Use re.sub for case-insensitive replacement and wrap with a span
+                highlighted_data = re.sub(
+                    f'({re.escape(keyword)})',
+                    r'<span class="highlight">\1</span>',
+                    safe_data,
+                    flags=re.IGNORECASE
+                )
+                result['highlighted_data'] = highlighted_data
+            else:
+                result['highlighted_data'] = safe_data
+
+            # Also keep the raw data for the ConfigMap view
+            result['pretty_data'] = pretty_data
 
         return templates.TemplateResponse(
             "search_results.html",
