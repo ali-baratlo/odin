@@ -5,6 +5,7 @@ from pymongo.collection import Collection
 from api import endpoints
 from utils.db import get_resource_collection
 from typing import Optional
+import json
 
 templates = Jinja2Templates(directory="templates")
 router = APIRouter()
@@ -33,8 +34,8 @@ def ui_search(
     Handles the UI search functionality by calling the shared query logic.
     """
     try:
-        # Call the shared query logic directly, passing the injected collection
-        search_results = endpoints._query_resources(
+        # Call the shared query logic
+        results_models = endpoints._query_resources(
             collection=collection,
             keyword=keyword,
             cluster_name=cluster_name,
@@ -42,6 +43,11 @@ def ui_search(
             resource_type=resource_type,
             resource_name=resource_name
         )
+
+        # Convert models to dicts and add a pretty-printed data field for the template
+        search_results = [res.model_dump() for res in results_models]
+        for result in search_results:
+            result['pretty_data'] = json.dumps(result.get('data', {}), indent=2)
 
         return templates.TemplateResponse(
             "search_results.html",
