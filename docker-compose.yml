@@ -15,9 +15,10 @@ services:
   web:
     build: .
     container_name: odin_app
-    environment:
-      MONGO_URI: "mongodb://mongo:27017/"
-      MONGO_DB_NAME: "odin"
+    env_file:
+      - .env # Load environment variables from .env file
+    volumes:
+      - ./clusters.yaml:/etc/odin/clusters.yaml:ro # Mount the cluster config as read-only
     depends_on:
       - mongo
     ports:
