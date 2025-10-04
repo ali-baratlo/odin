@@ -1,0 +1,3 @@
+- name: test-cluster
+  api_server: https://api.test-cluster:6443
+  token_env: TEST_CLUSTER_TOKEN
