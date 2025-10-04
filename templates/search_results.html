@@ -122,7 +122,7 @@
                                 <div class="kv-row">
                                     <div class="kv-key">{{ key }}</div>
                                     <div class="kv-value">
-                                        {% if value is mapping or value is list %}
+                                        {% if value is mapping or (value is iterable and not value is string) %}
                                             <pre>{{ value | tojson(indent=2) }}</pre>
                                         {% else %}
                                             {{ value }}
