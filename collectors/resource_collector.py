@@ -26,7 +26,7 @@ def collect_resources():
         cluster_name = cluster["name"]
         api_server = cluster["api_server"]
         token = cluster["token"]
-        namespace_label_selector = cluster.get("namespace_label_selector", "") # Get the label selector
+        namespace_label_selector = cluster.get("namespace_label_selector", "")
 
         print(f"\nCollecting from {cluster_name}")
 
@@ -46,7 +46,6 @@ def collect_resources():
         }
 
         try:
-            # Use the label selector to filter namespaces
             namespaces = core_v1_api.list_namespace(label_selector=namespace_label_selector)
         except Exception as e:
             print(f"Error fetching namespaces from {cluster_name} with selector '{namespace_label_selector}': {e}")
@@ -85,13 +84,16 @@ def collect_resources():
                         if existing_resource["resource_version"] != item.metadata.resource_version:
                             difference = diff(existing_resource["data"], resource_dict, syntax='symmetric')
 
+                            # Serialize the diff to ensure all keys are strings
+                            serializable_diff = json.loads(json.dumps(difference))
+
                             audit_log = AuditLog(
                                 resource_id=str(existing_resource["_id"]),
                                 old_version=existing_resource["resource_version"],
                                 new_version=item.metadata.resource_version,
-                                diff=difference,
+                                diff=serializable_diff,
                             )
-                            audit_log_collection.insert_one(audit_log.dict())
+                            audit_log_collection.insert_one(audit_log.model_dump())
 
                             resource_collection.update_one(
                                 {"_id": existing_resource["_id"]},
@@ -115,7 +117,7 @@ def collect_resources():
                             data=resource_dict,
                             full_resource_string=full_resource_str,
                         )
-                        resource_collection.insert_one(new_resource.dict())
+                        resource_collection.insert_one(new_resource.model_dump())
                         print(f"Inserted new {resource_type_name} '{item.metadata.name}' in '{namespace_name}'")
 
     print("\nResource collection complete.")
