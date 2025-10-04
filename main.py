@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from api import endpoints, ui_routes
 from scheduler.scheduler import start_scheduler
+from collectors.resource_collector import collect_resources
 import uvicorn
 
 @asynccontextmanager
@@ -11,8 +12,20 @@ async def lifespan(app: FastAPI):
     This handles startup and shutdown events.
     """
     print("Starting up...")
+
+    # Perform an initial collection on startup
+    print("Performing initial resource collection...")
+    try:
+        collect_resources()
+        print("Initial resource collection complete.")
+    except Exception as e:
+        print(f"Error during initial resource collection: {e}")
+
+    # Start the background scheduler for periodic collection
     start_scheduler()
+
     yield
+
     print("Shutting down...")
 
 app = FastAPI(
