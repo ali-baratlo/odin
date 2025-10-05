@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from api import endpoints, logo_routes
+from api import endpoints
 from scheduler.scheduler import start_scheduler
 from collectors.resource_collector import collect_resources
 import uvicorn
@@ -38,7 +38,6 @@ app = FastAPI(
 
 # API routes
 app.include_router(endpoints.router)
-app.include_router(logo_routes.router)
 
 # Serve the React frontend
 app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
