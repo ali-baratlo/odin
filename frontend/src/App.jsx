@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import yaml from 'js-yaml';
 import ini from 'ini';
@@ -112,12 +112,31 @@ const Snippet = ({ text, keyword, contextLines = 2 }) => {
 
 const ExpandableBox = ({ children }) => {
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isOverflowing, setIsOverflowing] = useState(false);
+    const contentRef = useRef(null);
+
+    useEffect(() => {
+        const current = contentRef.current;
+        if (current) {
+            // Only show the button if the content is actually taller than the collapsed view
+            if (current.scrollHeight > current.clientHeight) {
+                setIsOverflowing(true);
+            } else {
+                setIsOverflowing(false);
+            }
+        }
+    }, [children]); // Re-check when the content changes
+
     return (
-        <div className={`expandable-box ${isExpanded ? 'expanded' : ''}`}>
-            {children}
-            <button onClick={() => setIsExpanded(!isExpanded)} className="expand-button">
-                {isExpanded ? 'Show Less' : 'Show More'}
-            </button>
+        <div className="expandable-container">
+            <div ref={contentRef} className={`expandable-box ${isExpanded ? 'expanded' : ''}`}>
+                {children}
+            </div>
+            {isOverflowing && (
+                <button onClick={() => setIsExpanded(!isExpanded)} className="expand-button">
+                    {isExpanded ? 'Show Less' : 'Show More'}
+                </button>
+            )}
         </div>
     );
 };
