@@ -28,7 +28,6 @@ def highlight_recursive(data: Any, keyword: str) -> Any:
         return [highlight_recursive(item, keyword) for item in data]
 
     if isinstance(data, str):
-        # Escape the string to prevent XSS, then apply highlighting
         safe_str = html.escape(data)
         return re.sub(
             f'({re.escape(keyword)})',
@@ -56,6 +55,7 @@ def ui_search(
     namespace: Optional[str] = Query(None),
     resource_type: Optional[str] = Query(None),
     resource_name: Optional[str] = Query(None),
+    limit: int = Query(100, description="Maximum number of results to return"),
 ):
     """
     Handles the UI search functionality by calling the shared query logic
@@ -68,13 +68,23 @@ def ui_search(
             cluster_name=cluster_name,
             namespace=namespace,
             resource_type=resource_type,
-            resource_name=resource_name
+            resource_name=resource_name,
+            limit=limit
         )
 
         for result in search_results:
-            # Generate and highlight structured data for the "Summary" view
             structured_data = get_structured_data(result)
-            result['structured_data'] = highlight_recursive(structured_data, keyword)
+
+            # For ConfigMaps, only show matching key/value pairs in the summary
+            if result.get('resource_type') == 'ConfigMap' and keyword:
+                filtered_data = {}
+                if isinstance(structured_data, dict):
+                    for key, value in structured_data.items():
+                        if keyword.lower() in key.lower() or keyword.lower() in str(value).lower():
+                            filtered_data[key] = value
+                result['structured_data'] = highlight_recursive(filtered_data, keyword)
+            else:
+                result['structured_data'] = highlight_recursive(structured_data, keyword)
 
             # Generate highlighted data for the "Raw Data" view
             pretty_data = json.dumps(result.get('data', {}), indent=2)
@@ -101,6 +111,7 @@ def ui_search(
                 "namespace": namespace,
                 "resource_type": resource_type,
                 "resource_name": resource_name,
+                "limit": limit,
             }
         )
     except Exception as e:
