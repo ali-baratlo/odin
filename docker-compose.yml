@@ -19,6 +19,7 @@ services:
       - .env # Load environment variables from .env file
     volumes:
       - ./clusters.yaml:/etc/odin/clusters.yaml:ro # Mount the cluster config as read-only
+      - ./uploads:/app/uploads # Persist uploaded logos
     depends_on:
       - mongo
     ports:

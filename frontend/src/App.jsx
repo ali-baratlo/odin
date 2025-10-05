@@ -5,6 +5,57 @@ import ini from 'ini';
 import { presentResource } from './presenter';
 import './App.css';
 
+const LogoUploader = ({ onUploadSuccess }) => {
+    const [file, setFile] = useState(null);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+
+    const handleFileChange = (e) => {
+        const selectedFile = e.target.files[0];
+        if (selectedFile && selectedFile.type === 'image/png') {
+            setFile(selectedFile);
+            setError('');
+        } else {
+            setFile(null);
+            setError('Please select a PNG file.');
+        }
+    };
+
+    const handleUpload = async () => {
+        if (!file) {
+            setError('No file selected.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            await axios.post('/api/logo', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+            setSuccess('Logo uploaded successfully!');
+            setError('');
+            onUploadSuccess(); // Trigger a refresh of the logo
+        } catch (err) {
+            setError('Upload failed. Please try again.');
+            console.error(err);
+        }
+    };
+
+    return (
+        <div className="logo-uploader">
+            <input type="file" accept="image/png" onChange={handleFileChange} />
+            <button onClick={handleUpload} disabled={!file}>Upload Logo</button>
+            {error && <p className="error-message">{error}</p>}
+            {success && <p className="success-message">{success}</p>}
+        </div>
+    );
+};
+
+
 const SearchForm = ({ onSearch, loading, filters }) => {
   const [params, setParams] = useState({
     keyword: '',
@@ -198,6 +249,12 @@ function App() {
   const [error, setError] = useState('');
   const [filters, setFilters] = useState({ cluster_names: [], namespaces: [], resource_types: [] });
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [logoVersion, setLogoVersion] = useState(0);
+
+  const handleUploadSuccess = () => {
+    // Force a reload of the logo image by changing the URL
+    setLogoVersion(prevVersion => prevVersion + 1);
+  };
 
   useEffect(() => {
     const fetchFilters = async () => {
@@ -235,7 +292,11 @@ function App() {
 
   return (
     <div className="container">
-      <h1>Odin (OKD Resource Inspector)</h1>
+      <header className="app-header">
+        <img src={`/logo.png?v=${logoVersion}`} alt="Logo" className="app-logo" onError={(e) => e.target.style.display='none'} />
+        <h1>Odin (OKD Resource Inspector)</h1>
+      </header>
+      <LogoUploader onUploadSuccess={handleUploadSuccess} />
       <SearchForm onSearch={handleSearch} loading={loading} filters={filters} />
       {error && <p className="error-message">{error}</p>}
       <Results results={results} keyword={searchKeyword} />

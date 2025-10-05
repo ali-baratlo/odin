@@ -28,6 +28,9 @@ COPY . .
 # Copy the built frontend from the build stage
 COPY --from=build /app/frontend/dist ./frontend/dist
 
+# Create the uploads directory
+RUN mkdir -p /app/uploads
+
 # Set permissions
 RUN chmod +x /app/entrypoint.sh
 RUN useradd -ms /bin/bash odinuser && chown -R odinuser:odinuser /app
