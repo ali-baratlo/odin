@@ -85,15 +85,12 @@
                                         {% if result.is_configmap_search %}
                                             {% if value is iterable and not value is string %}
                                                 <div class="snippet-container">
-                                                {% for snippet_group in value %}
-                                                    {% if not loop.first %}<div class="snippet-separator">...</div>{% endif %}
-                                                    {% for line in snippet_group %}
+                                                    {% for line in value %}
                                                         <div class="snippet-line">
                                                             <span class="line-number">{{ line.line_number }}</span>
                                                             <span class="line-text">{{ line.line_text | safe }}</span>
                                                         </div>
                                                     {% endfor %}
-                                                {% endfor %}
                                                 </div>
                                             {% else %}
                                                 {{ value | safe }}
