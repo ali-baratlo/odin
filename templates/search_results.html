@@ -13,7 +13,7 @@
             --border-color: #555;
             --primary-accent: #6BE56B;
             --secondary-accent: #A0DEFF;
-            --highlight-bg: #FFD700;
+            --highlight-bg: #FFFF00;
             --text-light: #e0e0e0;
             --text-dark: #000;
         }
@@ -74,14 +74,14 @@
         /* Data Display Styles */
         .code-block {
             background-color: #202020; color: var(--text-light); padding: 15px; border-radius: 6px;
-            overflow-x: auto; font-family: 'Consolas', 'Monaco', monospace; max-height: 400px;
+            overflow-x: auto; font-family: 'Consolas', 'Monaco', monospace; max-height: 400px; text-align: left;
         }
         .code-block pre { margin: 0; white-space: pre-wrap; word-break: break-all; }
-        .highlight { background-color: #FFFF00; color: #000; font-weight: bold; padding: 2px 4px; border-radius: 3px; }
+        .highlight { background-color: var(--highlight-bg); color: var(--text-dark); padding: 2px 4px; border-radius: 3px; }
         .key-value-table { border: 1px solid #444; border-radius: 6px; overflow: hidden; font-family: 'Consolas', 'Monaco', monospace; }
         .kv-row { display: flex; border-bottom: 1px solid #444; }
         .kv-row:last-child { border-bottom: none; }
-        .kv-key, .kv-value { padding: 10px 15px; word-break: break-all; text-align: left; }
+        .kv-key, .kv-value { padding: 10px 15px; word-break: break-all; text-align: center; }
         .kv-key { background-color: #3a3a3a; font-weight: bold; color: var(--secondary-accent); flex: 0 0 30%; border-right: 1px solid #444; }
         .kv-value { background-color: #2c2c2c; flex-grow: 1; white-space: pre-wrap; }
     </style>
@@ -123,9 +123,9 @@
                                     <div class="kv-key">{{ key }}</div>
                                     <div class="kv-value">
                                         {% if value is mapping or (value is iterable and not value is string) %}
-                                            <pre>{{ value | tojson(indent=2) }}</pre>
+                                            <pre>{{ value | tojson(indent=2) | safe }}</pre>
                                         {% else %}
-                                            {{ value }}
+                                            {{ value | safe }}
                                         {% endif %}
                                     </div>
                                 </div>
