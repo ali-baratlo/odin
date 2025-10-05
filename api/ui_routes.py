@@ -28,28 +28,27 @@ def highlight_text(text: str, keyword: str) -> str:
 
 def create_snippets(text: str, keyword: str, context_lines: int = 2) -> List[Dict[str, Any]]:
     """
-    Creates contextual snippets from a block of text around a keyword.
-    Each snippet contains the line number and the highlighted line text.
+    Creates a single, continuous list of contextual snippets from a block of text.
     """
     lines = text.splitlines()
-    snippets = []
-    added_line_indices = set()
+    line_indices_to_show = set()
 
+    # Find all lines containing the keyword and add their context to a set
     for i, line in enumerate(lines):
-        if keyword.lower() in line.lower() and i not in added_line_indices:
+        if keyword.lower() in line.lower():
             start = max(0, i - context_lines)
             end = min(len(lines), i + context_lines + 1)
-
-            current_snippet = []
             for j in range(start, end):
-                if j not in added_line_indices:
-                    current_snippet.append({
-                        "line_number": j + 1,
-                        "line_text": highlight_text(lines[j], keyword)
-                    })
-                    added_line_indices.add(j)
-            if current_snippet:
-                snippets.append(current_snippet)
+                line_indices_to_show.add(j)
+
+    # Build the snippets from the sorted, unique indices
+    snippets = []
+    sorted_indices = sorted(list(line_indices_to_show))
+    for index in sorted_indices:
+        snippets.append({
+            "line_number": index + 1,
+            "line_text": highlight_text(lines[index], keyword)
+        })
 
     return snippets
 
