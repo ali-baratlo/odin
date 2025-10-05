@@ -50,10 +50,16 @@ This is the recommended way to run the application for most users.
     ```
 
 2.  **Set Environment Variables:**
-    Create a `.env` file in the root directory for your cluster tokens.
+    Create a `.env` file in the root directory. This file is used for your cluster tokens and other optional configurations.
+
     ```env
     # .env
+    # Required: Cluster access tokens
     MY_CLUSTER_1_TOKEN="your-kube-api-token-for-cluster-1"
+
+    # Optional: Scheduler interval
+    # Set how often the collector runs (in hours). Defaults to 1.
+    SCHEDULER_INTERVAL_HOURS=2
     ```
 
 3.  **Build and Run with Docker Compose:**
