@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from api import endpoints, ui_routes
+from fastapi.staticfiles import StaticFiles
+from api import endpoints
 from scheduler.scheduler import start_scheduler
 from collectors.resource_collector import collect_resources
 import uvicorn
@@ -31,12 +32,16 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Odin - OKD Resource Collector and Inspector",
     description="A tool to collect, inspect, and compare Kubernetes resources from multiple clusters.",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan
 )
 
+# API routes
 app.include_router(endpoints.router)
-app.include_router(ui_routes.router)
+
+# Serve the React frontend
+app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

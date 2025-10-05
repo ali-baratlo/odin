@@ -1,24 +1,31 @@
 # Odin - Kubernetes Resource Collector and Inspector
 
-Odin is a powerful, containerized application designed to collect, store, and inspect Kubernetes resources from multiple clusters. It provides a RESTful API and a simple web interface to search and analyze resource configurations, making it easy to track changes, audit configurations, and ensure consistency across environments.
+Odin is a powerful, containerized application designed to collect, store, and inspect Kubernetes resources from multiple clusters. It features a modern React frontend and a robust FastAPI backend, providing an interactive and user-friendly experience for searching and analyzing resource configurations.
 
 ## Key Features
 
+- **Modern React Frontend**: A fast, responsive, and intuitive user interface built with React and Vite.
 - **Multi-Cluster Support**: Collects resources from any number of Kubernetes or OKD clusters.
 - **Comprehensive Resource Collection**: Gathers a wide range of resources, including ConfigMaps, Secrets, Deployments, Services, and Ingresses.
-- **MongoDB Backend**: Stores all resources as structured JSON documents in a MongoDB database, enabling flexible and powerful queries.
+- **MongoDB Backend**: Stores all resources as structured JSON documents, enabling flexible and powerful queries.
 - **Resource Versioning & Auditing**: Tracks changes to resources over time by storing new versions and logging the differences.
-- **RESTful API**: A robust FastAPI-powered API for listing, inspecting, and searching resources.
-- **Automatic Documentation**: Interactive API documentation (Swagger UI) is automatically generated and available at `/docs`.
+- **RESTful API**: A robust FastAPI-powered API for all data operations.
 - **Scheduled Data Collection**: A background job runs periodically to keep the resource data up-to-date.
-- **Containerized & Deployable**: Easily deployable with Docker and `docker-compose`.
+- **Containerized & Deployable**: A multi-stage Docker build creates a single, optimized image for easy deployment.
 
 ## Technology Stack
 
+- **Frontend**: React, Vite, Axios
 - **Backend**: Python 3, FastAPI
 - **Database**: MongoDB
 - **Kubernetes Client**: `kubernetes` Python client
 - **Containerization**: Docker, Docker Compose
+
+## Project Structure
+
+The project is now a monorepo with a separate frontend and backend:
+-   `/frontend`: Contains the React application.
+-   `/`: The root directory contains the Python backend and all Docker-related files.
 
 ## Getting Started
 
@@ -26,65 +33,61 @@ Odin is a powerful, containerized application designed to collect, store, and in
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
+- [Node.js and npm](https://nodejs.org/en/) (for local frontend development)
 
-### Setup & Running the Project
+### Production (Docker)
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd <repository-directory>
-    ```
+This is the recommended way to run the application for most users.
 
-2.  **Configure Cluster Connections:**
-
-    Create a `clusters.yaml` file in the root of the project. This file defines the clusters you want to collect resources from.
-
+1.  **Configure Cluster Connections:**
+    Create a `clusters.yaml` file in the root of the project.
     ```yaml
     # clusters.yaml
     - name: my-cluster-1
       api_server: https://api.my-cluster-1.com:6443
       token_env: MY_CLUSTER_1_TOKEN
-
-    - name: my-cluster-2
-      api_server: https://api.my-cluster-2.com:6443
-      token_env: MY_CLUSTER_2_TOKEN
-      # Optional: Only scan namespaces with a specific label
-      # The format is a standard Kubernetes label selector string.
-      namespace_label_selector: "environment=production"
+      namespace_label_selector: "environment=production" # Optional
     ```
 
-    You can use the `namespace_label_selector` field to restrict the resource collection to only namespaces that match the specified label. If omitted, all namespaces will be scanned.
-
-3.  **Set Environment Variables:**
-
-    Odin uses environment variables to securely load the authentication tokens for your clusters. Create a `.env` file in the root directory:
-
+2.  **Set Environment Variables:**
+    Create a `.env` file in the root directory for your cluster tokens.
     ```env
     # .env
     MY_CLUSTER_1_TOKEN="your-kube-api-token-for-cluster-1"
-    MY_CLUSTER_2_TOKEN="your-kube-api-token-for-cluster-2"
     ```
-    *Note: The `token_env` value in `clusters.yaml` must match the environment variable name in your `.env` file.*
 
-4.  **Build and Run with Docker Compose:**
-
-    With the configuration in place, start the application:
+3.  **Build and Run with Docker Compose:**
     ```bash
-    docker-compose up --build
+    docker compose up --build
     ```
-    This will build the FastAPI application image and start both the `web` and `mongo` services.
+    This command will build the frontend, build the backend, and start all services.
 
-5.  **Access the Application:**
+4.  **Access the Application:**
+    - **Web App**: [http://localhost:8000](http://localhost:8000)
+    - **API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-    - **Web Interface**: Open your browser to [http://localhost:8000](http://localhost:8000)
-    - **API Documentation**: Access the interactive Swagger UI at [http://localhost:8000/docs](http://localhost:8000/docs)
+### Local Development
 
-## API Endpoints
+For developers who want to work on the frontend and backend separately.
 
-The application provides several API endpoints for interacting with the collected resource data. For detailed information and to try them out, please visit the `/docs` endpoint.
+1.  **Start the Backend:**
+    - Ensure you have a MongoDB instance running.
+    - Set up your `clusters.yaml` and `.env` files as described above.
+    - Run the Python application:
+      ```bash
+      pip install -r requirements.txt
+      uvicorn main:app --reload
+      ```
+    The backend will be available at `http://localhost:8000`.
 
-- `GET /api/resources`: List and search for resources.
-- `GET /api/resources/{resource_id}`: Inspect a single resource by its ID.
-- `GET /filters/*`: Get unique values for filters like cluster names, namespaces, and resource types.
+2.  **Start the Frontend:**
+    - Navigate to the `frontend` directory.
+    - Install dependencies and start the Vite development server:
+      ```bash
+      cd frontend
+      npm install
+      npm run dev
+      ```
+    The frontend development server will be available at `http://localhost:5173` (or another port if 5173 is in use). Vite will proxy API requests to the backend at `http://localhost:8000`.
 
-The resource collector will run automatically upon startup and then every 5 minutes to keep the data fresh. You can monitor the collection process in the container logs.
+    *Note: A `vite.config.js` is included to handle the proxying of `/api` and `/filters` requests.*
