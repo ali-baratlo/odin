@@ -84,12 +84,13 @@ function presentConfigMap(data) {
     for (const key in configData) {
         const value = configData[key];
         try {
-            if (key.endsWith('.yml') || key.endsWith('.yaml') || key.endsWith('.conf')) {
+            if (key.endsWith('.yml') || key.endsWith('.yaml')) {
                 const parsed = yaml.load(value);
-                // Ensure we don't return null or undefined, which can break rendering.
-                presentedData[key] = parsed || value;
-            } else if (key.endsWith('.ini')) {
-                presentedData[key] = ini.parse(value);
+                // Only treat as an object if parsing results in a non-null object
+                presentedData[key] = parsed && typeof parsed === 'object' ? parsed : value;
+            } else if (key.endsWith('.ini') || key.endsWith('.conf')) {
+                const parsed = ini.parse(value);
+                presentedData[key] = parsed && typeof parsed === 'object' ? parsed : value;
             } else {
                 presentedData[key] = value;
             }
