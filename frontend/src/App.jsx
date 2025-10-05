@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { presentResource } from './presenter';
 import './App.css';
 
 // Note: In a real app, these would be separate component files.
@@ -72,41 +73,51 @@ const SearchForm = ({ onSearch, loading, filters }) => {
   );
 };
 
-const ResourceCard = ({ resource, keyword }) => {
-  const [activeTab, setActiveTab] = useState('summary');
-
-  const highlight = (text) => {
+const Highlight = ({ text, keyword }) => {
     if (!keyword || !text) return text;
     const regex = new RegExp(`(${keyword})`, 'gi');
     return text.split(regex).map((part, index) =>
       regex.test(part) ? <span key={index} className="highlight">{part}</span> : part
     );
-  };
+};
 
-  // A simple summary view
+const ValueRenderer = ({ value, keyword }) => {
+    if (typeof value === 'object' && value !== null) {
+        const jsonString = JSON.stringify(value, null, 2);
+        return <pre><Highlight text={jsonString} keyword={keyword} /></pre>;
+    }
+    return <Highlight text={String(value)} keyword={keyword} />;
+};
+
+
+const ResourceCard = ({ resource, keyword }) => {
+  const [activeTab, setActiveTab] = useState('summary');
+  const summaryData = presentResource(resource);
+
   const summary = (
     <div className="key-value-table">
-      {Object.entries(resource.data).slice(0, 5).map(([key, value]) => (
+      {Object.entries(summaryData).map(([key, value]) => (
         <div className="kv-row" key={key}>
-          <div className="kv-key">{highlight(key)}</div>
-          <div className="kv-value">{highlight(String(value))}</div>
+          <div className="kv-key"><Highlight text={key} keyword={keyword} /></div>
+          <div className="kv-value">
+            <ValueRenderer value={value} keyword={keyword} />
+          </div>
         </div>
       ))}
-       {Object.keys(resource.data).length > 5 && <div className="kv-row"><div className="kv-key">...</div><div className="kv-value"></div></div>}
     </div>
   );
 
   const rawData = (
     <div className="code-block">
-      <pre><code>{highlight(JSON.stringify(resource.data, null, 2))}</code></pre>
+      <pre><code><Highlight text={JSON.stringify(resource.data, null, 2)} keyword={keyword} /></code></pre>
     </div>
   );
 
   return (
     <div className="resource-card">
-      <h3>{highlight(resource.resource_name)} ({highlight(resource.resource_type)})</h3>
+      <h3><Highlight text={resource.resource_name} keyword={keyword} /> (<Highlight text={resource.resource_type} keyword={keyword} />)</h3>
       <p>
-        <strong>Cluster:</strong> {highlight(resource.cluster_name)} | <strong>Namespace:</strong> {highlight(resource.namespace)}
+        <strong>Cluster:</strong> <Highlight text={resource.cluster_name} keyword={keyword} /> | <strong>Namespace:</strong> <Highlight text={resource.namespace} keyword={keyword} />
       </p>
       <div className="tab-buttons">
         <button className={activeTab === 'summary' ? 'active' : ''} onClick={() => setActiveTab('summary')}>Summary</button>
