@@ -162,16 +162,19 @@ h1 {
   white-space: pre-wrap;
 }
 
-.kv-value pre {
-  margin: 0;
-}
-
+.kv-value pre,
+.snippet-container,
 .code-block {
   background-color: var(--code-bg);
   padding: 1rem;
   border-radius: 5px;
+  max-height: 350px; /* A reasonable default height */
+  overflow-y: auto;  /* Make it scrollable */
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 1.1em; /* Made text larger */
 }
 
+.kv-value pre,
 .code-block pre {
   margin: 0;
   white-space: pre-wrap;
@@ -180,13 +183,6 @@ h1 {
 }
 
 /* Snippet Styles */
-.snippet-container {
-  background-color: var(--code-bg);
-  padding: 10px;
-  border-radius: 4px;
-  font-family: 'Consolas', 'Monaco', monospace;
-  font-size: 0.9em;
-}
 .snippet-line {
   display: flex;
 }
@@ -207,35 +203,4 @@ h1 {
   color: var(--error-color);
   text-align: center;
   font-weight: bold;
-}
-
-/* Expandable Box Styles */
-.expandable-box {
-  position: relative;
-}
-
-.expandable-box > div, .expandable-box > pre {
-  max-height: 250px; /* Default collapsed height */
-  overflow: hidden;
-  transition: max-height 0.3s ease-in-out;
-}
-
-.expandable-box.expanded > div, .expandable-box.expanded > pre {
-  max-height: none; /* A large value to accommodate content */
-}
-
-.expand-button {
-  display: block;
-  width: 100%;
-  text-align: center;
-  padding: 8px;
-  margin-top: 8px;
-  background-color: #444;
-  border: 1px solid var(--border-color);
-  color: var(--text-light);
-  border-radius: 4px;
-  cursor: pointer;
-}
-.expand-button:hover {
-  background-color: #555;
 }
