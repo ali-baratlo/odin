@@ -1,6 +1,3 @@
-import yaml from 'js-yaml';
-import ini from 'ini';
-
 /**
  * Takes a raw resource object and returns a structured, human-readable summary.
  * @param {object} resource - The full resource object from the API.
@@ -78,27 +75,6 @@ function presentIngress(data) {
 }
 
 function presentConfigMap(data) {
-    const configData = data.data || {};
-    const presentedData = {};
-
-    for (const key in configData) {
-        const value = configData[key];
-        try {
-            if (key.endsWith('.yml') || key.endsWith('.yaml')) {
-                const parsed = yaml.load(value);
-                // Only treat as an object if parsing results in a non-null object
-                presentedData[key] = parsed && typeof parsed === 'object' ? parsed : value;
-            } else if (key.endsWith('.ini') || key.endsWith('.conf')) {
-                const parsed = ini.parse(value);
-                presentedData[key] = parsed && typeof parsed === 'object' ? parsed : value;
-            } else {
-                presentedData[key] = value;
-            }
-        } catch (e) {
-            // If parsing fails, fall back to the raw text.
-            console.error(`Failed to parse ${key}:`, e);
-            presentedData[key] = value;
-        }
-    }
-    return presentedData;
+    // Pass the raw data through. The UI component will now handle all parsing and display logic.
+    return data.data || {};
 }

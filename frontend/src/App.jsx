@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import yaml from 'js-yaml';
+import ini from 'ini';
 import { presentResource } from './presenter';
 import './App.css';
 
@@ -83,7 +85,7 @@ const Snippet = ({ text, keyword, contextLines = 2 }) => {
     const lineIndicesToShow = new Set();
 
     lines.forEach((line, i) => {
-        if (line.toLowerCase().includes(keyword.toLowerCase())) {
+        if (keyword && line.toLowerCase().includes(keyword.toLowerCase())) {
             const start = Math.max(0, i - contextLines);
             const end = Math.min(lines.length, i + contextLines + 1);
             for (let j = start; j < end; j++) {
@@ -92,9 +94,7 @@ const Snippet = ({ text, keyword, contextLines = 2 }) => {
         }
     });
 
-    if (lineIndicesToShow.size === 0) {
-        return <Highlight text={text} keyword={keyword} />;
-    }
+    if (lineIndicesToShow.size === 0) return <Highlight text={text} keyword={keyword} />;
 
     const sortedIndices = Array.from(lineIndicesToShow).sort((a, b) => a - b);
 
@@ -110,14 +110,32 @@ const Snippet = ({ text, keyword, contextLines = 2 }) => {
     );
 };
 
-const ValueRenderer = ({ value, keyword, isConfigMap, inSummary }) => {
-    if (isConfigMap && inSummary && typeof value === 'string' && value.includes('\n') && keyword) {
+const ValueRenderer = ({ value, keyword, filename }) => {
+    // If a keyword is provided, we are in "search" mode.
+    if (keyword && typeof value === 'string' && value.includes('\n')) {
         return <Snippet text={value} keyword={keyword} />;
     }
 
+    // If no keyword, we are in "browse" mode. Try to parse known file types.
+    if (typeof value === 'string') {
+        try {
+            if (filename.endsWith('.yml') || filename.endsWith('.yaml')) {
+                const parsed = yaml.load(value);
+                return <pre>{JSON.stringify(parsed, null, 2)}</pre>;
+            }
+            if (filename.endsWith('.ini') || filename.endsWith('.conf')) {
+                const parsed = ini.parse(value);
+                return <pre>{JSON.stringify(parsed, null, 2)}</pre>;
+            }
+        } catch (e) {
+            // If parsing fails, fall back to showing the plain text.
+            return <pre>{value}</pre>;
+        }
+    }
+
+    // Default rendering for other types (or non-string values)
     if (typeof value === 'object' && value !== null) {
-        const jsonString = JSON.stringify(value, null, 2);
-        return <pre><Highlight text={jsonString} keyword={keyword} /></pre>;
+        return <pre>{JSON.stringify(value, null, 2)}</pre>;
     }
     return <Highlight text={String(value)} keyword={keyword} />;
 };
@@ -125,6 +143,7 @@ const ValueRenderer = ({ value, keyword, isConfigMap, inSummary }) => {
 const ResourceCard = ({ resource, keyword }) => {
   const [activeTab, setActiveTab] = useState('summary');
   const summaryData = presentResource(resource);
+  const isConfigMap = resource.resource_type?.toLowerCase() === 'configmap';
 
   const summary = (
     <div className="key-value-table">
@@ -132,12 +151,11 @@ const ResourceCard = ({ resource, keyword }) => {
         <div className="kv-row" key={key}>
           <div className="kv-key"><Highlight text={key} keyword={keyword} /></div>
           <div className="kv-value">
-            <ValueRenderer
-              value={value}
-              keyword={keyword}
-              isConfigMap={resource.resource_type?.toLowerCase() === 'configmap'}
-              inSummary={true}
-            />
+            {isConfigMap ? (
+              <ValueRenderer value={value} keyword={keyword} filename={key} />
+            ) : (
+              <ValueRenderer value={value} keyword={keyword} filename="" />
+            )}
           </div>
         </div>
       ))}
