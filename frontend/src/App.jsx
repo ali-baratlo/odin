@@ -80,7 +80,7 @@ const Highlight = ({ text, keyword }) => {
     );
 };
 
-const Snippet = ({ text, keyword, contextLines = 2 }) => {
+const Snippet = ({ text, keyword, contextLines = 5 }) => {
     const lines = text.split('\n');
     const lineIndicesToShow = new Set();
 
