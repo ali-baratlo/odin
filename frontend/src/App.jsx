@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import yaml from 'js-yaml';
 import ini from 'ini';
@@ -110,51 +110,20 @@ const Snippet = ({ text, keyword, contextLines = 2 }) => {
     );
 };
 
-const ExpandableBox = ({ children }) => {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const [isOverflowing, setIsOverflowing] = useState(false);
-    const contentRef = useRef(null);
-
-    useEffect(() => {
-        const current = contentRef.current;
-        if (current) {
-            // Only show the button if the content is actually taller than the collapsed view
-            if (current.scrollHeight > current.clientHeight) {
-                setIsOverflowing(true);
-            } else {
-                setIsOverflowing(false);
-            }
-        }
-    }, [children]); // Re-check when the content changes
-
-    return (
-        <div className="expandable-container">
-            <div ref={contentRef} className={`expandable-box ${isExpanded ? 'expanded' : ''}`}>
-                {children}
-            </div>
-            {isOverflowing && (
-                <button onClick={() => setIsExpanded(!isExpanded)} className="expand-button">
-                    {isExpanded ? 'Show Less' : 'Show More'}
-                </button>
-            )}
-        </div>
-    );
-};
-
 const ValueRenderer = ({ value, keyword, filename }) => {
     if (keyword && typeof value === 'string' && value.includes('\n')) {
-        return <ExpandableBox><Snippet text={value} keyword={keyword} /></ExpandableBox>;
+        return <Snippet text={value} keyword={keyword} />;
     }
 
     if (typeof value === 'string') {
         try {
             if (filename.endsWith('.yml') || filename.endsWith('.yaml')) {
                 const parsed = yaml.load(value);
-                return <ExpandableBox><pre>{JSON.stringify(parsed, null, 2)}</pre></ExpandableBox>;
+                return <pre>{JSON.stringify(parsed, null, 2)}</pre>;
             }
             if (filename.endsWith('.ini') || filename.endsWith('.conf')) {
                 const parsed = ini.parse(value);
-                return <ExpandableBox><pre>{JSON.stringify(parsed, null, 2)}</pre></ExpandableBox>;
+                return <pre>{JSON.stringify(parsed, null, 2)}</pre>;
             }
         } catch (e) {
             return <pre>{value}</pre>;
@@ -162,7 +131,7 @@ const ValueRenderer = ({ value, keyword, filename }) => {
     }
 
     if (typeof value === 'object' && value !== null) {
-        return <ExpandableBox><pre>{JSON.stringify(value, null, 2)}</pre></ExpandableBox>;
+        return <pre>{JSON.stringify(value, null, 2)}</pre>;
     }
     return <Highlight text={String(value)} keyword={keyword} />;
 };
@@ -190,11 +159,9 @@ const ResourceCard = ({ resource, keyword }) => {
   );
 
   const rawData = (
-    <ExpandableBox>
-        <div className="code-block">
-            <pre><code><Highlight text={JSON.stringify(resource.data, null, 2)} keyword={keyword} /></code></pre>
-        </div>
-    </ExpandableBox>
+    <div className="code-block">
+        <pre><code><Highlight text={JSON.stringify(resource.data, null, 2)} keyword={keyword} /></code></pre>
+    </div>
   );
 
   return (
