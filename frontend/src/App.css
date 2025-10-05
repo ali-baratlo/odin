@@ -170,11 +170,20 @@ h1 {
   white-space: pre-wrap;
 }
 
+.kv-value pre {
+  max-height: 400px;
+  overflow: auto;
+  background-color: var(--code-bg);
+  padding: 10px;
+  border-radius: 4px;
+}
+
 .code-block {
   background-color: var(--code-bg);
   padding: 1rem;
   border-radius: 5px;
-  overflow-x: auto;
+  max-height: 400px;
+  overflow: auto;
 }
 
 .code-block pre {
@@ -191,6 +200,8 @@ h1 {
   border-radius: 4px;
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 0.9em;
+  max-height: 400px;
+  overflow-y: auto;
 }
 .snippet-line {
   display: flex;
