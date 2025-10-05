@@ -3,9 +3,6 @@ import axios from 'axios';
 import { presentResource } from './presenter';
 import './App.css';
 
-// Note: In a real app, these would be separate component files.
-// For simplicity in this context, they are included here.
-
 const SearchForm = ({ onSearch, loading, filters }) => {
   const [params, setParams] = useState({
     keyword: '',
@@ -81,14 +78,49 @@ const Highlight = ({ text, keyword }) => {
     );
 };
 
-const ValueRenderer = ({ value, keyword }) => {
+const Snippet = ({ text, keyword, contextLines = 2 }) => {
+    const lines = text.split('\n');
+    const lineIndicesToShow = new Set();
+
+    lines.forEach((line, i) => {
+        if (line.toLowerCase().includes(keyword.toLowerCase())) {
+            const start = Math.max(0, i - contextLines);
+            const end = Math.min(lines.length, i + contextLines + 1);
+            for (let j = start; j < end; j++) {
+                lineIndicesToShow.add(j);
+            }
+        }
+    });
+
+    if (lineIndicesToShow.size === 0) {
+        return <Highlight text={text} keyword={keyword} />;
+    }
+
+    const sortedIndices = Array.from(lineIndicesToShow).sort((a, b) => a - b);
+
+    return (
+        <div className="snippet-container">
+            {sortedIndices.map(index => (
+                <div key={index} className="snippet-line">
+                    <span className="line-number">{index + 1}</span>
+                    <span className="line-text"><Highlight text={lines[index]} keyword={keyword} /></span>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+const ValueRenderer = ({ value, keyword, isConfigMap, inSummary }) => {
+    if (isConfigMap && inSummary && typeof value === 'string' && value.includes('\n') && keyword) {
+        return <Snippet text={value} keyword={keyword} />;
+    }
+
     if (typeof value === 'object' && value !== null) {
         const jsonString = JSON.stringify(value, null, 2);
         return <pre><Highlight text={jsonString} keyword={keyword} /></pre>;
     }
     return <Highlight text={String(value)} keyword={keyword} />;
 };
-
 
 const ResourceCard = ({ resource, keyword }) => {
   const [activeTab, setActiveTab] = useState('summary');
@@ -100,7 +132,12 @@ const ResourceCard = ({ resource, keyword }) => {
         <div className="kv-row" key={key}>
           <div className="kv-key"><Highlight text={key} keyword={keyword} /></div>
           <div className="kv-value">
-            <ValueRenderer value={value} keyword={keyword} />
+            <ValueRenderer
+              value={value}
+              keyword={keyword}
+              isConfigMap={resource.resource_type?.toLowerCase() === 'configmap'}
+              inSummary={true}
+            />
           </div>
         </div>
       ))}
@@ -140,7 +177,6 @@ const Results = ({ results, keyword }) => {
     </div>
   );
 };
-
 
 function App() {
   const [results, setResults] = useState([]);
