@@ -1,4 +1,5 @@
-// presenter.js
+import yaml from 'js-yaml';
+import ini from 'ini';
 
 /**
  * Takes a raw resource object and returns a structured, human-readable summary.
@@ -77,7 +78,26 @@ function presentIngress(data) {
 }
 
 function presentConfigMap(data) {
-    // For ConfigMaps, the most important data is the data itself.
-    // The UI component will handle special rendering for this.
-    return data.data || {};
+    const configData = data.data || {};
+    const presentedData = {};
+
+    for (const key in configData) {
+        const value = configData[key];
+        try {
+            if (key.endsWith('.yml') || key.endsWith('.yaml') || key.endsWith('.conf')) {
+                const parsed = yaml.load(value);
+                // Ensure we don't return null or undefined, which can break rendering.
+                presentedData[key] = parsed || value;
+            } else if (key.endsWith('.ini')) {
+                presentedData[key] = ini.parse(value);
+            } else {
+                presentedData[key] = value;
+            }
+        } catch (e) {
+            // If parsing fails, fall back to the raw text.
+            console.error(`Failed to parse ${key}:`, e);
+            presentedData[key] = value;
+        }
+    }
+    return presentedData;
 }
