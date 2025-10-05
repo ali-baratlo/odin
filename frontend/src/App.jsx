@@ -110,32 +110,40 @@ const Snippet = ({ text, keyword, contextLines = 2 }) => {
     );
 };
 
+const ExpandableBox = ({ children }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    return (
+        <div className={`expandable-box ${isExpanded ? 'expanded' : ''}`}>
+            {children}
+            <button onClick={() => setIsExpanded(!isExpanded)} className="expand-button">
+                {isExpanded ? 'Show Less' : 'Show More'}
+            </button>
+        </div>
+    );
+};
+
 const ValueRenderer = ({ value, keyword, filename }) => {
-    // If a keyword is provided, we are in "search" mode.
     if (keyword && typeof value === 'string' && value.includes('\n')) {
-        return <Snippet text={value} keyword={keyword} />;
+        return <ExpandableBox><Snippet text={value} keyword={keyword} /></ExpandableBox>;
     }
 
-    // If no keyword, we are in "browse" mode. Try to parse known file types.
     if (typeof value === 'string') {
         try {
             if (filename.endsWith('.yml') || filename.endsWith('.yaml')) {
                 const parsed = yaml.load(value);
-                return <pre>{JSON.stringify(parsed, null, 2)}</pre>;
+                return <ExpandableBox><pre>{JSON.stringify(parsed, null, 2)}</pre></ExpandableBox>;
             }
             if (filename.endsWith('.ini') || filename.endsWith('.conf')) {
                 const parsed = ini.parse(value);
-                return <pre>{JSON.stringify(parsed, null, 2)}</pre>;
+                return <ExpandableBox><pre>{JSON.stringify(parsed, null, 2)}</pre></ExpandableBox>;
             }
         } catch (e) {
-            // If parsing fails, fall back to showing the plain text.
             return <pre>{value}</pre>;
         }
     }
 
-    // Default rendering for other types (or non-string values)
     if (typeof value === 'object' && value !== null) {
-        return <pre>{JSON.stringify(value, null, 2)}</pre>;
+        return <ExpandableBox><pre>{JSON.stringify(value, null, 2)}</pre></ExpandableBox>;
     }
     return <Highlight text={String(value)} keyword={keyword} />;
 };
@@ -151,11 +159,11 @@ const ResourceCard = ({ resource, keyword }) => {
         <div className="kv-row" key={key}>
           <div className="kv-key"><Highlight text={key} keyword={keyword} /></div>
           <div className="kv-value">
-            {isConfigMap ? (
-              <ValueRenderer value={value} keyword={keyword} filename={key} />
-            ) : (
-              <ValueRenderer value={value} keyword={keyword} filename="" />
-            )}
+            <ValueRenderer
+              value={value}
+              keyword={keyword}
+              filename={isConfigMap ? key : ""}
+            />
           </div>
         </div>
       ))}
@@ -163,9 +171,11 @@ const ResourceCard = ({ resource, keyword }) => {
   );
 
   const rawData = (
-    <div className="code-block">
-      <pre><code><Highlight text={JSON.stringify(resource.data, null, 2)} keyword={keyword} /></code></pre>
-    </div>
+    <ExpandableBox>
+        <div className="code-block">
+            <pre><code><Highlight text={JSON.stringify(resource.data, null, 2)} keyword={keyword} /></code></pre>
+        </div>
+    </ExpandableBox>
   );
 
   return (
