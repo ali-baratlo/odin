@@ -5,7 +5,7 @@ from pymongo.collection import Collection
 from api import endpoints
 from utils.db import get_resource_collection
 from utils.presenter import get_structured_data
-from typing import Optional
+from typing import Optional, Any
 import json
 import re
 import html
@@ -13,11 +13,35 @@ import html
 templates = Jinja2Templates(directory="templates")
 router = APIRouter()
 
+def highlight_recursive(data: Any, keyword: str) -> Any:
+    """
+    Recursively traverses a data structure (dict, list) and highlights
+    all string values that contain the keyword.
+    """
+    if not keyword:
+        return data
+
+    if isinstance(data, dict):
+        return {key: highlight_recursive(value, keyword) for key, value in data.items()}
+
+    if isinstance(data, list):
+        return [highlight_recursive(item, keyword) for item in data]
+
+    if isinstance(data, str):
+        # Escape the string to prevent XSS, then apply highlighting
+        safe_str = html.escape(data)
+        return re.sub(
+            f'({re.escape(keyword)})',
+            r'<span class="highlight">\1</span>',
+            safe_str,
+            flags=re.IGNORECASE
+        )
+
+    return data
+
 @router.get("/", response_class=HTMLResponse, summary="Home page with search")
 def home_page(request: Request):
-    """
-    Renders the main search page.
-    """
+    """Renders the main search page."""
     return templates.TemplateResponse(
         "search_results.html",
         {"request": request, "results": [], "total_matches": 0}
@@ -35,7 +59,7 @@ def ui_search(
 ):
     """
     Handles the UI search functionality by calling the shared query logic
-    and preparing data for presentation.
+    and preparing data for presentation with highlighting.
     """
     try:
         search_results = endpoints._query_resources(
@@ -48,21 +72,21 @@ def ui_search(
         )
 
         for result in search_results:
-            # Generate structured data for the "Summary" view
-            result['structured_data'] = get_structured_data(result)
+            # Generate and highlight structured data for the "Summary" view
+            structured_data = get_structured_data(result)
+            result['structured_data'] = highlight_recursive(structured_data, keyword)
 
             # Generate highlighted data for the "Raw Data" view
             pretty_data = json.dumps(result.get('data', {}), indent=2)
             safe_data = html.escape(pretty_data)
 
             if keyword:
-                highlighted_data = re.sub(
+                result['highlighted_data'] = re.sub(
                     f'({re.escape(keyword)})',
                     r'<span class="highlight">\1</span>',
                     safe_data,
                     flags=re.IGNORECASE
                 )
-                result['highlighted_data'] = highlighted_data
             else:
                 result['highlighted_data'] = safe_data
 
