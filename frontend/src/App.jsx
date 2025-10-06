@@ -30,6 +30,9 @@ function generateLink(resource, clusterConfigs) {
         return null;
     }
 
+    // Sanitize the FQDN to remove any existing protocol to prevent invalid URLs
+    const sanitizedFqdn = clusterConfig.fqdn.replace(/^(https?:\/\/)?/i, '');
+
     const resourceTypeLower = resource.resource_type.toLowerCase();
     const mapping = RESOURCE_URL_MAP[resourceTypeLower];
 
@@ -38,10 +41,10 @@ function generateLink(resource, clusterConfigs) {
     }
 
     if (mapping.namespaced) {
-        return `https://${clusterConfig.fqdn}/k8s/ns/${resource.namespace}/${mapping.path}/${resource.resource_name}`;
+        return `https://${sanitizedFqdn}/k8s/ns/${resource.namespace}/${mapping.path}/${resource.resource_name}`;
     } else {
         // Handle cluster-scoped resources
-        return `https://${clusterConfig.fqdn}/k8s/cluster/${mapping.path}/${resource.resource_name}`;
+        return `https://${sanitizedFqdn}/k8s/cluster/${mapping.path}/${resource.resource_name}`;
     }
 }
 
