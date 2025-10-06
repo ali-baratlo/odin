@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import yaml from 'js-yaml';
-import ini from 'ini';
 import { presentResource } from './presenter';
 import './App.css';
 
@@ -84,8 +82,10 @@ const Snippet = ({ text, keyword, contextLines = 5 }) => {
     const lines = text.split('\n');
     const lineIndicesToShow = new Set();
 
+    if (!keyword) return null; // Don't render snippets if there's no keyword
+
     lines.forEach((line, i) => {
-        if (keyword && line.toLowerCase().includes(keyword.toLowerCase())) {
+        if (line.toLowerCase().includes(keyword.toLowerCase())) {
             const start = Math.max(0, i - contextLines);
             const end = Math.min(lines.length, i + contextLines + 1);
             for (let j = start; j < end; j++) {
@@ -94,7 +94,7 @@ const Snippet = ({ text, keyword, contextLines = 5 }) => {
         }
     });
 
-    if (lineIndicesToShow.size === 0) return <Highlight text={text} keyword={keyword} />;
+    if (lineIndicesToShow.size === 0) return null;
 
     const sortedIndices = Array.from(lineIndicesToShow).sort((a, b) => a - b);
 
@@ -110,57 +110,40 @@ const Snippet = ({ text, keyword, contextLines = 5 }) => {
     );
 };
 
-const ValueRenderer = ({ value, keyword, filename }) => {
-    if (keyword && typeof value === 'string' && value.includes('\n')) {
-        return <Snippet text={value} keyword={keyword} />;
-    }
-
-    if (typeof value === 'string') {
-        try {
-            if (filename.endsWith('.yml') || filename.endsWith('.yaml')) {
-                const parsed = yaml.load(value);
-                return <pre>{JSON.stringify(parsed, null, 2)}</pre>;
-            }
-            if (filename.endsWith('.ini') || filename.endsWith('.conf')) {
-                const parsed = ini.parse(value);
-                return <pre>{JSON.stringify(parsed, null, 2)}</pre>;
-            }
-        } catch (e) {
-            return <pre>{value}</pre>;
-        }
-    }
-
+const ValueRenderer = ({ value }) => {
     if (typeof value === 'object' && value !== null) {
         return <pre>{JSON.stringify(value, null, 2)}</pre>;
     }
-    return <Highlight text={String(value)} keyword={keyword} />;
+    return String(value);
 };
 
 const ResourceCard = ({ resource, keyword }) => {
   const [activeTab, setActiveTab] = useState('summary');
   const summaryData = presentResource(resource);
-  const isConfigMap = resource.resource_type?.toLowerCase() === 'configmap';
+  const fullResourceString = JSON.stringify(resource.data, null, 2);
 
   const summary = (
-    <div className="key-value-table">
-      {Object.entries(summaryData).map(([key, value]) => (
-        <div className="kv-row" key={key}>
-          <div className="kv-key"><Highlight text={key} keyword={keyword} /></div>
-          <div className="kv-value">
-            <ValueRenderer
-              value={value}
-              keyword={keyword}
-              filename={isConfigMap ? key : ""}
-            />
+    <>
+      <div className="key-value-table">
+        {Object.entries(summaryData).map(([key, value]) => (
+          <div className="kv-row" key={key}>
+            <div className="kv-key">{key}</div>
+            <div className="kv-value"><ValueRenderer value={value} /></div>
           </div>
+        ))}
+      </div>
+      {keyword && (
+        <div className="matches-section">
+          <h4>Matches</h4>
+          <Snippet text={fullResourceString} keyword={keyword} />
         </div>
-      ))}
-    </div>
+      )}
+    </>
   );
 
   const rawData = (
     <div className="code-block">
-        <pre><code><Highlight text={JSON.stringify(resource.data, null, 2)} keyword={keyword} /></code></pre>
+        <pre><code><Highlight text={fullResourceString} keyword={keyword} /></code></pre>
     </div>
   );
 
@@ -181,9 +164,12 @@ const ResourceCard = ({ resource, keyword }) => {
   );
 };
 
-const Results = ({ results, keyword }) => {
-  if (!results.length) {
-    return <p>No results found.</p>;
+const Results = ({ results, keyword, hasSearched }) => {
+  if (!hasSearched) {
+      return <p className="welcome-message">Please use the search bar to find Kubernetes resources.</p>
+  }
+  if (results.length === 0) {
+    return <p>No results found for your query.</p>;
   }
   return (
     <div className="results-container">
@@ -198,6 +184,7 @@ function App() {
   const [error, setError] = useState('');
   const [filters, setFilters] = useState({ cluster_names: [], namespaces: [], resource_types: [] });
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
     const fetchFilters = async () => {
@@ -222,6 +209,7 @@ function App() {
   const handleSearch = async (params) => {
     setLoading(true);
     setError('');
+    setHasSearched(true);
     setSearchKeyword(params.keyword);
     try {
       const response = await axios.get('/api/resources', { params });
@@ -238,7 +226,7 @@ function App() {
       <h1>Odin (OKD Resource Inspector)</h1>
       <SearchForm onSearch={handleSearch} loading={loading} filters={filters} />
       {error && <p className="error-message">{error}</p>}
-      <Results results={results} keyword={searchKeyword} />
+      <Results results={results} keyword={searchKeyword} hasSearched={hasSearched} />
     </div>
   );
 }
