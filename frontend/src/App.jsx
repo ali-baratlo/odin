@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import yaml from 'js-yaml';
+import ini from 'ini';
 import { presentResource } from './presenter';
 import './App.css';
 
@@ -78,11 +80,11 @@ const Highlight = ({ text, keyword }) => {
     );
 };
 
-const Snippet = ({ text, keyword, contextLines = 10 }) => {
+const Snippet = ({ text, keyword, contextLines = 5 }) => {
     const lines = text.split('\n');
     const lineIndicesToShow = new Set();
 
-    if (!keyword) return null; // Don't render snippets if there's no keyword
+    if (!keyword) return <pre>{text}</pre>;
 
     lines.forEach((line, i) => {
         if (line.toLowerCase().includes(keyword.toLowerCase())) {
@@ -94,7 +96,7 @@ const Snippet = ({ text, keyword, contextLines = 10 }) => {
         }
     });
 
-    if (lineIndicesToShow.size === 0) return null;
+    if (lineIndicesToShow.size === 0) return <pre>{text}</pre>;
 
     const sortedIndices = Array.from(lineIndicesToShow).sort((a, b) => a - b);
 
@@ -117,35 +119,63 @@ const ValueRenderer = ({ value }) => {
     return String(value);
 };
 
+const ConfigMapSummary = ({ data, keyword }) => {
+    let filteredData = data;
+    // If there's a keyword, filter the data to only show matching key/value pairs
+    if (keyword) {
+        filteredData = Object.entries(data).reduce((acc, [key, value]) => {
+            if (key.toLowerCase().includes(keyword.toLowerCase()) || (typeof value === 'string' && value.toLowerCase().includes(keyword.toLowerCase()))) {
+                acc[key] = value;
+            }
+            return acc;
+        }, {});
+    }
+
+    return (
+        <div className="key-value-table">
+            {Object.entries(filteredData).map(([key, value]) => (
+                <div className="kv-row" key={key}>
+                    <div className="kv-key"><Highlight text={key} keyword={keyword} /></div>
+                    <div className="kv-value">
+                        {typeof value === 'string' && value.includes('\n') ? (
+                            <Snippet text={value} keyword={keyword} />
+                        ) : (
+                            <Highlight text={String(value)} keyword={keyword} />
+                        )}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+
+const StandardSummary = ({ data, fullResourceString, keyword }) => {
+    return (
+        <>
+            <div className="key-value-table">
+                {Object.entries(data).map(([key, value]) => (
+                    <div className="kv-row" key={key}>
+                        <div className="kv-key">{key}</div>
+                        <div className="kv-value"><ValueRenderer value={value} /></div>
+                    </div>
+                ))}
+            </div>
+            {keyword && (
+                <div className="matches-section">
+                    <h4>Matches</h4>
+                    <Snippet text={fullResourceString} keyword={keyword} />
+                </div>
+            )}
+        </>
+    );
+};
+
 const ResourceCard = ({ resource, keyword }) => {
   const [activeTab, setActiveTab] = useState('summary');
   const summaryData = presentResource(resource);
+  const isConfigMap = resource.resource_type?.toLowerCase() === 'configmap';
   const fullResourceString = JSON.stringify(resource.data, null, 2);
-
-  const summary = (
-    <>
-      <div className="key-value-table">
-        {Object.entries(summaryData).map(([key, value]) => (
-          <div className="kv-row" key={key}>
-            <div className="kv-key">{key}</div>
-            <div className="kv-value"><ValueRenderer value={value} /></div>
-          </div>
-        ))}
-      </div>
-      {keyword && (
-        <div className="matches-section">
-          <h4>Matches</h4>
-          <Snippet text={fullResourceString} keyword={keyword} />
-        </div>
-      )}
-    </>
-  );
-
-  const rawData = (
-    <div className="code-block">
-        <pre><code><Highlight text={fullResourceString} keyword={keyword} /></code></pre>
-    </div>
-  );
 
   return (
     <div className="resource-card">
@@ -158,7 +188,17 @@ const ResourceCard = ({ resource, keyword }) => {
         <button className={activeTab === 'raw' ? 'active' : ''} onClick={() => setActiveTab('raw')}>Raw Data</button>
       </div>
       <div className="tab-content">
-        {activeTab === 'summary' ? summary : rawData}
+        {activeTab === 'summary' ? (
+            isConfigMap ? (
+                <ConfigMapSummary data={summaryData} keyword={keyword} />
+            ) : (
+                <StandardSummary data={summaryData} fullResourceString={fullResourceString} keyword={keyword} />
+            )
+        ) : (
+            <div className="code-block">
+                <pre><code><Highlight text={fullResourceString} keyword={keyword} /></code></pre>
+            </div>
+        )}
       </div>
     </div>
   );
