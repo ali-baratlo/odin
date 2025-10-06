@@ -6,7 +6,7 @@ Odin is a powerful, containerized application designed to collect, store, and in
 
 - **Modern React Frontend**: A fast, responsive, and intuitive user interface built with React and Vite.
 - **Multi-Cluster Support**: Collects resources from any number of Kubernetes or OKD clusters.
-- **Comprehensive Resource Collection**: Gathers a wide range of resources, including ConfigMaps, Secrets, Deployments, Services, and Ingresses.
+- **Comprehensive Resource Collection**: Gathers a wide range of resources, including Pods, ConfigMaps, Secrets, Services, Deployments, StatefulSets, DaemonSets, Jobs, CronJobs, Ingresses, NetworkPolicies, PersistentVolumes (PVs), PersistentVolumeClaims (PVCs), HorizontalPodAutoscalers (HPAs), and CustomResourceDefinitions (CRDs).
 - **MongoDB Backend**: Stores all resources as structured JSON documents, enabling flexible and powerful queries.
 - **Resource Versioning & Auditing**: Tracks changes to resources over time by storing new versions and logging the differences.
 - **RESTful API**: A robust FastAPI-powered API for all data operations.

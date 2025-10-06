@@ -243,3 +243,7 @@ h1 {
     margin-top: 0;
     color: var(--secondary-accent);
 }
+
+.matches-section .snippet-container {
+    max-height: 250px; /* A more compact height for the matches box */
+}
