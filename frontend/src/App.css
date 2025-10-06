@@ -103,25 +103,42 @@ h1 {
   padding-bottom: 0.5rem;
 }
 
+/* Tab Styles */
 .tab-buttons {
   display: flex;
+  gap: 0.5rem;
   border-bottom: 1px solid var(--border-color);
-  margin-bottom: 1rem;
+  margin-bottom: -1px; /* Overlap border for connected look */
 }
 
 .tab-button {
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1.5rem;
   cursor: pointer;
-  background: none;
-  border: none;
+  background: var(--container-bg);
+  border: 1px solid transparent;
+  border-bottom: none;
   color: var(--text-light);
   font-size: 1em;
-  border-bottom: 2px solid transparent;
+  border-radius: 6px 6px 0 0;
+  transition: background-color 0.2s;
+}
+
+.tab-button:hover {
+    background-color: var(--input-bg);
 }
 
 .tab-button.active {
-  color: var(--primary-accent);
-  border-bottom-color: var(--primary-accent);
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+  border-bottom: 1px solid var(--card-bg);
+  font-weight: bold;
+}
+
+.tab-content {
+    border: 1px solid var(--border-color);
+    border-top: none;
+    padding: 1.5rem;
+    border-radius: 0 0 8px 8px;
 }
 
 .highlight {
@@ -168,10 +185,10 @@ h1 {
   background-color: var(--code-bg);
   padding: 1rem;
   border-radius: 5px;
-  max-height: 800px; /* Increased height */
-  overflow-y: auto;  /* Make it scrollable */
+  max-height: 500px;
+  overflow-y: auto;
   font-family: 'Consolas', 'Monaco', monospace;
-  font-size: 1.1em; /* Made text larger */
+  font-size: 1.1em;
 }
 
 .kv-value pre,
@@ -199,8 +216,30 @@ h1 {
   overflow-wrap: break-word;
 }
 
-.error-message {
-  color: var(--error-color);
+.error-message,
+.welcome-message {
+  padding: 2rem;
   text-align: center;
   font-weight: bold;
+  background-color: var(--card-bg);
+  border-radius: 8px;
+}
+
+.error-message {
+    color: var(--error-color);
+}
+
+.welcome-message {
+    color: var(--secondary-accent);
+}
+
+.matches-section {
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+}
+
+.matches-section h4 {
+    margin-top: 0;
+    color: var(--secondary-accent);
 }
