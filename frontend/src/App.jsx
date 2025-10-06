@@ -78,7 +78,7 @@ const Highlight = ({ text, keyword }) => {
     );
 };
 
-const Snippet = ({ text, keyword, contextLines = 5 }) => {
+const Snippet = ({ text, keyword, contextLines = 10 }) => {
     const lines = text.split('\n');
     const lineIndicesToShow = new Set();
 
