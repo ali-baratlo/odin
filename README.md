@@ -47,6 +47,12 @@ This is the recommended way to run the application for most users.
       api_server: https://api.my-cluster-1.com:6443
       token_env: MY_CLUSTER_1_TOKEN
       namespace_label_selector: "environment=production" # Optional
+      fqdn_env: MY_CLUSTER_1_FQDN # Optional: For generating clickable links
+
+    - name: my-cluster-2
+      api_server: https://api.my-cluster-2.com:6443
+      token_env: MY_CLUSTER_2_TOKEN
+      fqdn_env: MY_CLUSTER_2_FQDN
     ```
 
 2.  **Set Environment Variables:**
@@ -56,6 +62,11 @@ This is the recommended way to run the application for most users.
     # .env
     # Required: Cluster access tokens
     MY_CLUSTER_1_TOKEN="your-kube-api-token-for-cluster-1"
+    MY_CLUSTER_2_TOKEN="your-kube-api-token-for-cluster-2"
+
+    # Optional: FQDNs for cluster UI links
+    MY_CLUSTER_1_FQDN="console.apps.my-cluster-1.com"
+    MY_CLUSTER_2_FQDN="console.apps.my-cluster-2.com"
 
     # Optional: Scheduler interval
     # Set how often the collector runs (in hours). Defaults to 1.

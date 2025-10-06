@@ -6,8 +6,13 @@ from pymongo.collection import Collection
 
 from utils.db import get_resource_collection
 from models.resource import Resource
+from cluster_config import CLUSTERS
 
 router = APIRouter()
+
+class ClusterConfigOut(BaseModel):
+    name: str
+    fqdn: Optional[str] = None
 
 class ResourceOut(Resource):
     id: str = Field(alias="_id")
@@ -104,3 +109,11 @@ def get_resource(resource_id: str, collection: Collection = Depends(get_resource
         return resource
 
     raise HTTPException(status_code=404, detail="Resource not found.")
+
+@router.get("/api/config", response_model=List[ClusterConfigOut], summary="Get cluster FQDN configurations")
+def get_cluster_config():
+    """
+    Returns a list of configured clusters and their FQDNs for link generation.
+    """
+    # Expose only non-sensitive information to the frontend
+    return [{"name": c.get("name"), "fqdn": c.get("fqdn")} for c in CLUSTERS]

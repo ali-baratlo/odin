@@ -5,6 +5,47 @@ import ini from 'ini';
 import { presentResource } from './presenter';
 import './App.css';
 
+// --- Pluralization and Scoping for URL Generation ---
+const RESOURCE_URL_MAP = {
+    'pod': { path: 'pods', namespaced: true },
+    'configmap': { path: 'configmaps', namespaced: true },
+    'secret': { path: 'secrets', namespaced: true },
+    'service': { path: 'services', namespaced: true },
+    'persistentvolumeclaim': { path: 'persistentvolumeclaims', namespaced: true },
+    'deployment': { path: 'deployments', namespaced: true },
+    'statefulset': { path: 'statefulsets', namespaced: true },
+    'daemonset': { path: 'daemonsets', namespaced: true },
+    'job': { path: 'jobs', namespaced: true },
+    'cronjob': { path: 'cronjobs', namespaced: true },
+    'ingress': { path: 'ingresses', namespaced: true },
+    'networkpolicy': { path: 'networkpolicies', namespaced: true },
+    'horizontalpodautoscaler': { path: 'horizontalpodautoscalers', namespaced: true },
+    'persistentvolume': { path: 'persistentvolumes', namespaced: false },
+    'customresourcedefinition': { path: 'customresourcedefinitions', namespaced: false },
+};
+
+function generateLink(resource, clusterConfigs) {
+    const clusterConfig = clusterConfigs.find(c => c.name === resource.cluster_name);
+    if (!clusterConfig || !clusterConfig.fqdn) {
+        return null;
+    }
+
+    const resourceTypeLower = resource.resource_type.toLowerCase();
+    const mapping = RESOURCE_URL_MAP[resourceTypeLower];
+
+    if (!mapping) {
+        return null; // Cannot generate link for unknown resource types
+    }
+
+    if (mapping.namespaced) {
+        return `https://${clusterConfig.fqdn}/k8s/ns/${resource.namespace}/${mapping.path}/${resource.resource_name}`;
+    } else {
+        // Handle cluster-scoped resources
+        return `https://${clusterConfig.fqdn}/k8s/cluster/${mapping.path}/${resource.resource_name}`;
+    }
+}
+
+
 const SearchForm = ({ onSearch, loading, filters }) => {
   const [params, setParams] = useState({
     keyword: '',
@@ -121,7 +162,6 @@ const ValueRenderer = ({ value }) => {
 
 const ConfigMapSummary = ({ data, keyword }) => {
     let filteredData = data;
-    // If there's a keyword, filter the data to only show matching key/value pairs
     if (keyword) {
         filteredData = Object.entries(data).reduce((acc, [key, value]) => {
             if (key.toLowerCase().includes(keyword.toLowerCase()) || (typeof value === 'string' && value.toLowerCase().includes(keyword.toLowerCase()))) {
@@ -171,15 +211,24 @@ const StandardSummary = ({ data, fullResourceString, keyword }) => {
     );
 };
 
-const ResourceCard = ({ resource, keyword }) => {
+const ResourceCard = ({ resource, keyword, clusterConfigs }) => {
   const [activeTab, setActiveTab] = useState('summary');
   const summaryData = presentResource(resource);
   const isConfigMap = resource.resource_type?.toLowerCase() === 'configmap';
   const fullResourceString = JSON.stringify(resource.data, null, 2);
+  const resourceLink = generateLink(resource, clusterConfigs);
+
+  const resourceTitle = resourceLink ? (
+    <a href={resourceLink} target="_blank" rel="noopener noreferrer">
+      <Highlight text={resource.resource_name} keyword={keyword} />
+    </a>
+  ) : (
+    <Highlight text={resource.resource_name} keyword={keyword} />
+  );
 
   return (
     <div className="resource-card">
-      <h3><Highlight text={resource.resource_name} keyword={keyword} /> (<Highlight text={resource.resource_type} keyword={keyword} />)</h3>
+      <h3>{resourceTitle} (<Highlight text={resource.resource_type} keyword={keyword} />)</h3>
       <p>
         <strong>Cluster:</strong> <Highlight text={resource.cluster_name} keyword={keyword} /> | <strong>Namespace:</strong> <Highlight text={resource.namespace} keyword={keyword} />
       </p>
@@ -204,16 +253,16 @@ const ResourceCard = ({ resource, keyword }) => {
   );
 };
 
-const Results = ({ results, keyword, hasSearched }) => {
+const Results = ({ results, keyword, hasSearched, clusterConfigs }) => {
   if (!hasSearched) {
-    return null; // Render nothing before the first search
+    return null;
   }
   if (results.length === 0) {
     return <p>No results found for your query.</p>;
   }
   return (
     <div className="results-container">
-      {results.map(res => <ResourceCard key={res.id} resource={res} keyword={keyword} />)}
+      {results.map(res => <ResourceCard key={res.id} resource={res} keyword={keyword} clusterConfigs={clusterConfigs} />)}
     </div>
   );
 };
@@ -223,27 +272,30 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [filters, setFilters] = useState({ cluster_names: [], namespaces: [], resource_types: [] });
+  const [clusterConfigs, setClusterConfigs] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
-    const fetchFilters = async () => {
+    const fetchInitialData = async () => {
       try {
-        const [clusters, namespaces, types] = await Promise.all([
+        const [clusters, namespaces, types, configs] = await Promise.all([
           axios.get('/filters/cluster_names'),
           axios.get('/filters/namespaces'),
           axios.get('/filters/resource_types'),
+          axios.get('/api/config'),
         ]);
         setFilters({
           cluster_names: clusters.data,
           namespaces: namespaces.data,
           resource_types: types.data,
         });
+        setClusterConfigs(configs.data);
       } catch (err) {
-        console.error("Failed to load filters", err);
+        console.error("Failed to load initial data", err);
       }
     };
-    fetchFilters();
+    fetchInitialData();
   }, []);
 
   const handleSearch = async (params) => {
@@ -266,7 +318,7 @@ function App() {
       <h1>Odin (OKD Resource Inspector)</h1>
       <SearchForm onSearch={handleSearch} loading={loading} filters={filters} />
       {error && <p className="error-message">{error}</p>}
-      <Results results={results} keyword={searchKeyword} hasSearched={hasSearched} />
+      <Results results={results} keyword={searchKeyword} hasSearched={hasSearched} clusterConfigs={clusterConfigs} />
     </div>
   );
 }
