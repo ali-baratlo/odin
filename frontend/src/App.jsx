@@ -206,7 +206,7 @@ const ResourceCard = ({ resource, keyword }) => {
 
 const Results = ({ results, keyword, hasSearched }) => {
   if (!hasSearched) {
-      return <p className="welcome-message">Please use the search bar to find Kubernetes resources.</p>
+    return null; // Render nothing before the first search
   }
   if (results.length === 0) {
     return <p>No results found for your query.</p>;
