@@ -108,3 +108,14 @@ For developers who want to work on the frontend and backend separately.
     The frontend development server will be available at `http://localhost:5173` (or another port if 5173 is in use). Vite will proxy API requests to the backend at `http://localhost:8000`.
 
     *Note: A `vite.config.js` is included to handle the proxying of `/api` and `/filters` requests.*
+
+## API Endpoints
+
+The application provides several API endpoints for interacting with the collected resource data. For detailed information and to try them out, please visit the `/docs` endpoint.
+
+- `GET /api/resources`: List and search for resources.
+- `GET /api/resources/{resource_id}`: Inspect a single resource by its ID.
+- `GET /filters/*`: Get unique values for filters like cluster names, namespaces, and resource types.
+- `GET /api/related-namespaces`: Find all namespaces where a resource with a specific name and type exists.
+
+The resource collector will run automatically upon startup and then every 5 minutes to keep the data fresh. You can monitor the collection process in the container logs.

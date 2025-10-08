@@ -101,9 +101,9 @@ def get_resources(
 def get_resource(resource_id: str, collection: Collection = Depends(get_resource_collection)):
     if not ObjectId.is_valid(resource_id):
         raise HTTPException(status_code=400, detail="Invalid resource ID format.")
-        
+
     resource = collection.find_one({"_id": ObjectId(resource_id)})
-    
+
     if resource:
         resource["_id"] = str(resource["_id"])
         return resource
@@ -117,3 +117,33 @@ def get_cluster_config():
     """
     # Expose only non-sensitive information to the frontend
     return [{"name": c.get("name"), "fqdn": c.get("fqdn")} for c in CLUSTERS]
+
+@router.get("/api/related-namespaces", response_model=List[str], summary="Find all namespaces for a given resource name and type")
+def get_related_namespaces(
+    resource_type: str = Query(..., description="The type of the resource (e.g., 'Service', 'Deployment')."),
+    name: str = Query(..., description="The name of the resource to find (case-insensitive)."),
+    collection: Collection = Depends(get_resource_collection),
+):
+    """
+    Finds and returns a unique list of namespaces where a resource of a specific
+    type and name exists. This is useful for discovering where an application or
+    service is deployed across all clusters.
+    """
+    import re
+
+    query = {
+        "resource_type": resource_type,
+        "resource_name": {"$regex": f"^{re.escape(name)}$", "$options": "i"}
+    }
+
+    # The `distinct` method returns a list of unique values for the 'namespace' field
+    # that match the query.
+    namespaces = collection.distinct("namespace", query)
+
+    if not namespaces:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No namespaces found for resource '{name}' of type '{resource_type}'"
+        )
+
+    return namespaces
