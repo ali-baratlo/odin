@@ -14,6 +14,10 @@ class ClusterConfigOut(BaseModel):
     name: str
     fqdn: Optional[str] = None
 
+class RelatedNamespaceOut(BaseModel):
+    namespace: str
+    cluster_name: str
+
 class ResourceOut(Resource):
     id: str = Field(alias="_id")
 
@@ -118,32 +122,54 @@ def get_cluster_config():
     # Expose only non-sensitive information to the frontend
     return [{"name": c.get("name"), "fqdn": c.get("fqdn")} for c in CLUSTERS]
 
-@router.get("/api/related-namespaces", response_model=List[str], summary="Find all namespaces for a given resource name and type")
+@router.get("/api/related-namespaces", response_model=List[RelatedNamespaceOut], summary="Find all namespaces for a given resource name and type")
 def get_related_namespaces(
     resource_type: str = Query(..., description="The type of the resource (e.g., 'Service', 'Deployment')."),
-    name: str = Query(..., description="The name of the resource to find (case-insensitive)."),
+    name: str = Query(..., description="The name of the resource to find (case-insensitive substring match)."),
     collection: Collection = Depends(get_resource_collection),
 ):
     """
-    Finds and returns a unique list of namespaces where a resource of a specific
-    type and name exists. This is useful for discovering where an application or
-    service is deployed across all clusters.
+    Finds and returns a unique list of namespaces and their corresponding clusters
+    where a resource of a specific type and name exists. This behaves like:
+    `oc get {resource_type} --all-namespaces | egrep -i {name}`
     """
     import re
 
-    query = {
-        "resource_type": resource_type,
-        "resource_name": {"$regex": f"^{re.escape(name)}$", "$options": "i"}
+    # Case-insensitive substring search, like `egrep -i`
+    match_stage = {
+        "$match": {
+            "resource_type": resource_type,
+            "resource_name": {"$regex": re.escape(name), "$options": "i"}
+        }
     }
 
-    # The `distinct` method returns a list of unique values for the 'namespace' field
-    # that match the query.
-    namespaces = collection.distinct("namespace", query)
+    # Group by namespace and cluster to get unique pairs
+    group_stage = {
+        "$group": {
+            "_id": {
+                "namespace": "$namespace",
+                "cluster_name": "$cluster_name"
+            }
+        }
+    }
 
-    if not namespaces:
+    # Reshape the output to the desired format
+    project_stage = {
+        "$project": {
+            "_id": 0,
+            "namespace": "$_id.namespace",
+            "cluster_name": "$_id.cluster_name"
+        }
+    }
+
+    pipeline = [match_stage, group_stage, project_stage]
+
+    results = list(collection.aggregate(pipeline))
+
+    if not results:
         raise HTTPException(
             status_code=404,
-            detail=f"No namespaces found for resource '{name}' of type '{resource_type}'"
+            detail=f"No namespaces found for resource name containing '{name}' of type '{resource_type}'"
         )
 
-    return namespaces
+    return results

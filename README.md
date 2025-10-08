@@ -116,6 +116,6 @@ The application provides several API endpoints for interacting with the collecte
 - `GET /api/resources`: List and search for resources.
 - `GET /api/resources/{resource_id}`: Inspect a single resource by its ID.
 - `GET /filters/*`: Get unique values for filters like cluster names, namespaces, and resource types.
-- `GET /api/related-namespaces`: Find all namespaces where a resource with a specific name and type exists.
+- `GET /api/related-namespaces`: Find all namespaces (and their corresponding clusters) where a resource with a specific name and type exists.
 
 The resource collector will run automatically upon startup and then every 5 minutes to keep the data fresh. You can monitor the collection process in the container logs.
