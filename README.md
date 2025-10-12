@@ -10,37 +10,33 @@ Odin is a powerful, containerized application designed to collect, store, and in
 - **MongoDB Backend**: Stores all resources as structured JSON documents, enabling flexible and powerful queries.
 - **Resource Versioning & Auditing**: Tracks changes to resources over time by storing new versions and logging the differences.
 - **RESTful API**: A robust FastAPI-powered API for all data operations.
-- **Scheduled Data Collection**: A background job runs periodically to keep the resource data up-to-date.
-- **Containerized & Deployable**: A multi-stage Docker build creates a single, optimized image for easy deployment.
+- **Configurable Scheduled Data Collection**: A background job runs periodically to keep the resource data up-to-date. The interval is configurable via an environment variable.
+- **Helm and CI/CD Ready**: Comes with a production-ready Helm chart and a complete GitLab CI/CD pipeline for automated deployments.
 
 ## Technology Stack
 
 - **Frontend**: React, Vite, Axios
 - **Backend**: Python 3, FastAPI
 - **Database**: MongoDB
-- **Kubernetes Client**: `kubernetes` Python client
-- **Containerization**: Docker, Docker Compose
+- **Deployment**: Docker, Docker Compose, Helm
+- **CI/CD**: GitLab CI
 
-## Project Structure
+---
 
-The project is now a monorepo with a separate frontend and backend:
--   `/frontend`: Contains the React application.
--   `/`: The root directory contains the Python backend and all Docker-related files.
+## Deployment
 
-## Getting Started
+There are two primary ways to deploy and run Odin: locally with Docker Compose for development and testing, or with the provided Helm chart for a production-grade Kubernetes deployment.
 
-### Prerequisites
+### 1. Local Development (with Docker Compose)
 
+This method is ideal for local development and testing.
+
+#### Prerequisites
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
-- [Node.js and npm](https://nodejs.org/en/) (for local frontend development)
 
-### Production (Docker)
-
-This is the recommended way to run the application for most users.
-
-1.  **Configure Cluster Connections:**
-    Create a `clusters.yaml` file in the root of the project.
+#### Setup
+1.  **Configure Clusters:** Create a `clusters.yaml` file in the root of the project to define the clusters you want to monitor.
     ```yaml
     # clusters.yaml
     - name: my-cluster-1
@@ -48,74 +44,74 @@ This is the recommended way to run the application for most users.
       token_env: MY_CLUSTER_1_TOKEN
       namespace_label_selector: "environment=production" # Optional
       fqdn_env: MY_CLUSTER_1_FQDN # Optional: For generating clickable links
-
-    - name: my-cluster-2
-      api_server: https://api.my-cluster-2.com:6443
-      token_env: MY_CLUSTER_2_TOKEN
-      fqdn_env: MY_CLUSTER_2_FQDN
     ```
 
-2.  **Set Environment Variables:**
-    Create a `.env` file in the root directory. This file is used for your cluster tokens and other optional configurations.
-
+2.  **Set Environment Variables:** Create a `.env` file in the root directory for your cluster tokens and other configurations.
     ```env
     # .env
-    # Required: Cluster access tokens
     MY_CLUSTER_1_TOKEN="your-kube-api-token-for-cluster-1"
-    MY_CLUSTER_2_TOKEN="your-kube-api-token-for-cluster-2"
-
-    # Optional: FQDNs for cluster UI links
-    MY_CLUSTER_1_FQDN="console.apps.my-cluster-1.com"
-    MY_CLUSTER_2_FQDN="console.apps.my-cluster-2.com"
-
-    # Optional: Scheduler interval
-    # Set how often the collector runs (in hours). Defaults to 1.
-    SCHEDULER_INTERVAL_HOURS=2
+    MY_CLUSTER_1_FQDN="console.apps.my-cluster-1.com" # Optional
+    SCHEDULER_INTERVAL_HOURS=2 # Optional: Defaults to 1
     ```
 
-3.  **Build and Run with Docker Compose:**
+3.  **Build and Run:**
     ```bash
     docker compose up --build
     ```
-    This command will build the frontend, build the backend, and start all services.
+    The application will be available at `http://localhost:8000`.
 
-4.  **Access the Application:**
-    - **Web App**: [http://localhost:8000](http://localhost:8000)
-    - **API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+---
 
-### Local Development
+### 2. Production Deployment (with Helm)
 
-For developers who want to work on the frontend and backend separately.
+The provided Helm chart is the recommended way to deploy Odin to a production Kubernetes cluster.
 
-1.  **Start the Backend:**
-    - Ensure you have a MongoDB instance running.
-    - Set up your `clusters.yaml` and `.env` files as described above.
-    - Run the Python application:
-      ```bash
-      pip install -r requirements.txt
-      uvicorn main:app --reload
-      ```
-    The backend will be available at `http://localhost:8000`.
+#### Prerequisites
+- [Helm](https://helm.sh/docs/intro/install/)
+- A running Kubernetes cluster
+- `kubectl` configured to connect to your cluster
 
-2.  **Start the Frontend:**
-    - Navigate to the `frontend` directory.
-    - Install dependencies and start the Vite development server:
-      ```bash
-      cd frontend
-      npm install
-      npm run dev
-      ```
-    The frontend development server will be available at `http://localhost:5173` (or another port if 5173 is in use). Vite will proxy API requests to the backend at `http://localhost:8000`.
+#### Helm Chart Configuration
+All configuration is managed in the `helm/values.yaml` file. Before deploying, you should customize this file to match your environment.
 
-    *Note: A `vite.config.js` is included to handle the proxying of `/api` and `/filters` requests.*
+**Key values to configure:**
+- `image.repository`: The URL of the Docker image repository where your Odin image is stored.
+- `env.tokens`: A map of environment variable names to the **base64-encoded** tokens for your clusters.
+- `env.fqdns`: A map of environment variable names to the FQDNs of your cluster UIs.
+- `clustersConfig`: The raw YAML content defining your clusters, just like the `clusters.yaml` file.
+
+#### Installation
+1.  **Navigate to the Helm directory:**
+    ```bash
+    cd helm
+    ```
+2.  **Install the chart:**
+    ```bash
+    helm install <release-name> . --namespace <your-namespace> --create-namespace -f values.yaml
+    ```
+    Replace `<release-name>` and `<your-namespace>` with your desired values.
+
+---
+
+## CI/CD Pipeline
+
+The project includes a `.gitlab-ci.yml` file that defines a complete CI/CD pipeline for automating the build, test, and deployment process.
+
+### Pipeline Stages
+1.  **Test:** Runs the backend `pytest` suite to ensure code quality.
+2.  **Build:** Builds the multi-stage Docker image, which includes the compiled React frontend and the Python backend.
+3.  **Push:** Pushes the built Docker image to your container registry (configured via GitLab CI/CD variables).
+4.  **Deploy:** A manual-trigger job that uses the Helm chart to deploy the new version of the application to your Kubernetes cluster.
+
+To use the pipeline, you will need to configure the necessary CI/CD variables in your GitLab project settings, such as `CI_REGISTRY_USER`, `CI_REGISTRY_PASSWORD`, and the credentials for your Kubernetes cluster.
+
+---
 
 ## API Endpoints
 
-The application provides several API endpoints for interacting with the collected resource data. For detailed information and to try them out, please visit the `/docs` endpoint.
+For detailed information on all available API endpoints, you can access the interactive Swagger UI at `/docs` on your deployed instance.
 
 - `GET /api/resources`: List and search for resources.
 - `GET /api/resources/{resource_id}`: Inspect a single resource by its ID.
 - `GET /filters/*`: Get unique values for filters like cluster names, namespaces, and resource types.
 - `GET /api/related-namespaces`: Find all namespaces (and their corresponding clusters) where a resource with a specific name and type exists.
-
-The resource collector will run automatically upon startup and then every 5 minutes to keep the data fresh. You can monitor the collection process in the container logs.

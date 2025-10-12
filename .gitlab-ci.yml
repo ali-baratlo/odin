@@ -1,0 +1,61 @@
+variables:
+  DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+  HELM_RELEASE_NAME: odin-{{ .Release.Namespace }}
+
+stages:
+  - test
+  - build
+  - push
+  - deploy
+
+run_tests:
+  stage: test
+  image: python:3.11-slim
+  before_script:
+    - pip install -r requirements.txt
+    - apt-get update && apt-get install -y default-mysql-client # Or other DB client if needed for tests
+  script:
+    - export CLUSTERS_CONFIG_PATH="clusters.yaml"
+    - export TEST_CLUSTER_TOKEN="dummy-token"
+    - python3 -m pytest tests/
+  when: on_success
+
+build_docker_image:
+  stage: build
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $DOCKER_IMAGE_NAME .
+    - docker push $DOCKER_IMAGE_NAME
+  only:
+    - main # Or your default branch
+
+push_to_registry:
+  stage: push
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker push $DOCKER_IMAGE_NAME
+  only:
+    - main # Or your default branch
+
+deploy_to_okd:
+  stage: deploy
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  script:
+    - kubectl config get-contexts
+    - kubectl config use-context path/to/your/agent/config
+    - helm upgrade --install $HELM_RELEASE_NAME ./helm --namespace $YOUR_NAMESPACE --create-namespace --set image.tag=$CI_COMMIT_SHA --set-file clustersConfig=clusters.yaml --set-file env.tokens=<(echo "$ENCODED_TOKENS_SECRET" | base64 -d)
+  environment:
+    name: production
+  when: manual # To be triggered manually
+  only:
+    - main # Or your default branch

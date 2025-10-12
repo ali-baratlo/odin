@@ -12,6 +12,10 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html {
+  font-size: 12px; /* Set a smaller base font size to scale the UI down */
+}
+
 body {
   margin: 0;
   display: flex;

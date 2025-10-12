@@ -68,7 +68,17 @@ function presentIngress(data) {
 }
 
 function presentConfigMap(data) {
-    return data.data || {};
+    const configData = data.data || {};
+    const presentedData = {};
+
+    for (const key in configData) {
+        const lowerKey = key.toLowerCase();
+        if (lowerKey.includes('.crt') || lowerKey.includes('cert')) {
+            continue; // Skip certificate files
+        }
+        presentedData[key] = configData[key];
+    }
+    return presentedData;
 }
 
 function presentPod(data) {
