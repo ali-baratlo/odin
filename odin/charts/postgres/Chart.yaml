@@ -1,0 +1,5 @@
+apiVersion: v2
+name: postgres
+description: A PostgreSQL subchart for the odin application
+type: application
+version: 15

@@ -1,0 +1,88 @@
+replicaCount: 1
+
+odin:
+  image:
+    repository: ""
+    pullPolicy: Always
+    tag: ""
+
+
+  imagePullSecrets: []
+  
+  
+  service:
+    type: ClusterIP
+    port: 8000
+
+  httpProxy:
+    enabled: true
+    type: private
+    virtualhost:
+       fqdn: odin.apps.private.okd4.teh-1.snappcloud.io
+       tls:
+         enableFallbackCertificate: true
+         secretName: openshift-ingress/letsencrypt
+  
+  resources:
+    limits:
+       cpu: 500m
+       memory: 512Mi
+    requests:
+       memory: 512Mi
+
+  clusters_conf:
+    - name: "Teh1"
+      api_server: "https://api.okd4.teh-1.snappcloud.io:6443"
+      token_env: "TOKEN_TEH1"
+      label_selector: "environment in (production,staging)"
+    - name: "Teh2"
+      api_server: "https://api.okd4.teh-2.snappcloud.io:6443"
+      token_env: "TOKEN_TEH2"
+      label_selector: "environment in (production,staging)"
+
+  tokens:
+    TOKEN_TEH1: hi
+    TOKEN_TEH2: hi
+  
+  database:
+    host: odin-postgres
+    name: odin
+    pass: ""
+    user: odin
+    port: 5432
+
+postgres:
+  image:
+    repository: postgres
+    pullPolicy: Always
+    tag: 15
+
+  service:
+    type: ClusterIP
+    port: 5432
+
+  resources:
+    limits:
+       cpu: 700m
+       memory: 512Mi
+    requests:
+       memory: 512Mi
+
+  volumeMounts:
+    - name: pgdata
+      mountPath: /bitnami/postgresql
+
+  volumeClaimTemplates:
+    - metadata:
+        name: pgdata
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 100Gi
+  
+  pgdata: /bitnami/postgresql/data
+  pgvolume: /bitnami/postgresql
+
+  configMap: odin-cm
+  secret: odin-secret

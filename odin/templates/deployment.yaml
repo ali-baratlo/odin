@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "odin.fullname" . }}
+  labels:
+    {{- include "odin.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "odin.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "odin.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.odin.image.repository }}:{{ .Values.odin.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.odin.image.pullPolicy }}
+          env:
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "odin.fullname" . }}-cm
+                  key: db_user
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "odin.fullname" . }}-cm
+                  key: db_host
+            - name: DB_SERVICE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "odin.fullname" . }}-cm
+                  key: db_port
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "odin.fullname" . }}-cm
+                  key: db_name
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "odin.fullname" . }}-secret
+                  key: password
+          {{- range .Values.odin.clusters_conf }}
+            - name: {{ .token_env }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "odin.fullname" $ }}-secret
+                  key: {{ .token_env }}
+          {{- end }}
+
+          volumeMounts:
+            - name: odin
+              mountPath: /etc/odin
+              readOnly: true
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.odin.service.port }}
+              protocol: TCP
+              
+          {{- with .Values.odin.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+      volumes:
+        - name: odin
+          configMap:
+            name: {{ include "odin.fullname" . }}-cm
+          
+  

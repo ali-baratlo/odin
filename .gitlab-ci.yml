@@ -1,0 +1,128 @@
+stages:
+- build
+- deploy
+
+########################## Job_Temp
+.build:
+  image: docker:stable
+  stage: build
+  before_script:
+    - docker login -p ${ODIN_OKD_TOKEN} -u unused ${OKD4_REGISTRY}
+  script:
+  - if [ "$CI_COMMIT_BRANCH" == "staging" ]; then export CHART_NAME=odin-stage; fi
+  - if [ "$CI_COMMIT_BRANCH" == "main" ]; then export CHART_NAME=odin; fi
+  - docker build -f ./Dockerfile . -t ${OKD4_REGISTRY}/${OKD4_NAMESPACE}/${CHART_NAME}:${CI_COMMIT_SHA}
+  - docker push ${OKD4_REGISTRY}/${OKD4_NAMESPACE}/${CHART_NAME}:${CI_COMMIT_SHA}
+  only:
+  - staging
+  - main
+
+.deploy:
+  stage: deploy
+  image: registry.snapp.tech/docker/deployer:alpine3.16
+  script:
+    - |
+      helm upgrade --install "${CHART_NAME}" .okd/odin \
+         -f "${HELM_VALUES_FILE}" \
+         --set odin.image.repository="${IMAGE_STREAM}/${OKD4_NAMESPACE}/${CHART_NAME}" \
+         --set odin.image.tag="${CI_COMMIT_SHA}" \
+         ${EXTRA_HELM_SET} \
+         --kube-token "${ODIN_OKD_TOKEN}" \
+         --kube-apiserver "${OKD4_SERVER_CONSOLE}" \
+         --namespace "${OKD4_NAMESPACE}"
+  when: manual
+  only:
+  - staging
+
+
+
+########################## Snapp
+  
+build_snapp:
+   extends: .build
+   variables:
+     ODIN_OKD_TOKEN: "${TEH1_OKD_TOKEN}"
+     OKD4_REGISTRY: 'image-registry.apps.private.okd4.teh-1.snappcloud.io'
+     OKD4_NAMESPACE: odin
+   only:
+   - staging
+   - main
+
+deploy_staging:
+   extends: .deploy
+   variables:
+     CHART_NAME: odin-stage
+     OKD4_NAMESPACE: odin
+     ODIN_OKD_TOKEN: "${TEH1_OKD_TOKEN}"
+     OKD4_SERVER_CONSOLE: 'https://api.okd4.teh-1.snappcloud.io:6443'
+     IMAGE_STREAM: 'image-registry.openshift-image-registry.svc:5000'
+     HELM_VALUES_FILE: .okd/odin/values-snapp-stage.yaml
+     EXTRA_HELM_SET: >
+       --set odin.tokens.TOKEN_TEH1=${TEH_1_CLUSTER_TOKEN}
+       --set odin.tokens.TOKEN_TEH2=${TEH_2_CLUSTER_TOKEN}
+       --set odin.database.pass=${POSTGRES_PASS}
+   only:
+     - staging
+   when: manual
+
+deploy_production:
+   extends: .deploy
+   variables:
+     CHART_NAME: odin
+     OKD4_NAMESPACE: odin
+     ODIN_OKD_TOKEN: "${TEH1_OKD_TOKEN}"
+     OKD4_SERVER_CONSOLE: 'https://api.okd4.teh-1.snappcloud.io:6443'
+     IMAGE_STREAM: 'image-registry.openshift-image-registry.svc:5000'
+     HELM_VALUES_FILE: .okd/odin/values-snapp.yaml
+     EXTRA_HELM_SET: >
+       --set odin.tokens.TOKEN_TEH1=${TEH_1_CLUSTER_TOKEN}
+       --set odin.tokens.TOKEN_TEH2=${TEH_2_CLUSTER_TOKEN}
+       --set odin.database.pass=${POSTGRES_PASS}
+   only:
+     - main
+   when: manual
+
+########################## Baly
+
+
+build_baly:
+   extends: .build
+   variables:
+     ODIN_OKD_TOKEN: ${BALY_OKD_TOKEN}
+     OKD4_REGISTRY: 'registry.apps.internal.okd.eu-central-1.cloud.baly.app'
+     OKD4_NAMESPACE: baly-odin
+   only:
+   - staging
+   - main
+
+deploy_baly_staging:
+   extends: .deploy
+   variables:
+     CHART_NAME: odin-stage
+     OKD4_NAMESPACE: baly-odin
+     OKD4_SERVER_CONSOLE: 'https://api.okd.eu-central-1.cloud.baly.app:6443'
+     ODIN_OKD_TOKEN: ${BALY_OKD_TOKEN}
+     IMAGE_STREAM: 'image-registry.openshift-image-registry.svc:5000'
+     HELM_VALUES_FILE: .okd/odin/values-baly-stage.yaml
+     EXTRA_HELM_SET: >
+       --set odin.tokens.TOKEN_BALY=${BALY_CLUSTER_TOKEN}
+       --set odin.database.pass=${POSTGRES_PASS}
+   only:
+     - staging
+   when: manual
+
+deploy_baly_production:
+   extends: .deploy
+   variables:
+     CHART_NAME: odin
+     OKD4_NAMESPACE: baly-odin
+     OKD4_SERVER_CONSOLE: 'https://api.okd.eu-central-1.cloud.baly.app:6443'
+     ODIN_OKD_TOKEN: ${BALY_OKD_TOKEN}
+     IMAGE_STREAM: 'image-registry.openshift-image-registry.svc:5000'
+     HELM_VALUES_FILE: .okd/odin/values-baly.yaml
+     EXTRA_HELM_SET: >
+       --set odin.tokens.TOKEN_BALY=${BALY_CLUSTER_TOKEN}
+       --set odin.database.pass=${POSTGRES_PASS}
+   only:
+     - main
+   when: manual
