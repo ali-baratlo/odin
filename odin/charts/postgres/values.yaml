@@ -1,0 +1,34 @@
+image:
+  repository: postgres
+  pullPolicy: Always
+  tag: 15
+
+service:
+  type: ClusterIP
+  port: 5432
+
+resources:
+  limits:
+     cpu: 700m
+     memory: 512Mi
+  requests:
+     memory: 512Mi
+
+volumeMounts:
+  - name: pgdata
+    mountPath: /bitnami/postgresql
+
+volumeClaimTemplates:
+  - metadata:
+      name: pgdata
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 7Gi
+
+pgdata: /bitnami/postgresql/data
+pgvolume: /bitnami/postgresql
+
+configMap: odin-stage-cm
+secret: odin-stage-secret
