@@ -3,6 +3,7 @@ from kubernetes import client
 from kubernetes.client import ApiClient, ApiException
 from cluster_config import CLUSTERS
 from utils.db import get_resource_collection, get_audit_log_collection
+from utils.logger import logger
 from models.resource import Resource, AuditLog
 from jsondiff import diff
 
@@ -10,7 +11,6 @@ from jsondiff import diff
 # `namespaced=True` for resources within a namespace.
 # `namespaced=False` for cluster-wide resources.
 RESOURCE_TYPES = [
-    # Namespaced
     {"name": "Pod", "list_func": "list_namespaced_pod", "api": "CoreV1Api", "namespaced": True},
     {"name": "ConfigMap", "list_func": "list_namespaced_config_map", "api": "CoreV1Api", "namespaced": True},
     {"name": "Secret", "list_func": "list_namespaced_secret", "api": "CoreV1Api", "namespaced": True},
@@ -24,8 +24,6 @@ RESOURCE_TYPES = [
     {"name": "Ingress", "list_func": "list_namespaced_ingress", "api": "NetworkingV1Api", "namespaced": True},
     {"name": "NetworkPolicy", "list_func": "list_namespaced_network_policy", "api": "NetworkingV1Api", "namespaced": True},
     {"name": "HorizontalPodAutoscaler", "list_func": "list_namespaced_horizontal_pod_autoscaler", "api": "AutoscalingV1Api", "namespaced": True},
-
-    # Cluster-wide (not namespaced)
     {"name": "PersistentVolume", "list_func": "list_persistent_volume", "api": "CoreV1Api", "namespaced": False},
     {"name": "CustomResourceDefinition", "list_func": "list_custom_resource_definition", "api": "ApiextensionsV1Api", "namespaced": False},
 ]
@@ -41,7 +39,6 @@ def _process_and_store_resources(items, cluster_name, resource_type, namespace, 
             "resource_type": resource_type,
             "resource_name": item.metadata.name,
         }
-        # Namespace is only relevant for namespaced resources
         if namespace:
             query["namespace"] = namespace
 
@@ -68,11 +65,11 @@ def _process_and_store_resources(items, cluster_name, resource_type, namespace, 
                         "created_at": audit_log.changed_at
                     }}
                 )
-                print(f"Updated {resource_type} '{item.metadata.name}'" + (f" in '{namespace}'" if namespace else ""))
+                logger.info(f"Updated {resource_type} '{item.metadata.name}'" + (f" in '{namespace}'" if namespace else ""))
         else:
             new_resource = Resource(
                 cluster_name=cluster_name,
-                namespace=namespace or "", # Ensure namespace is not None
+                namespace=namespace or "",
                 resource_type=resource_type,
                 resource_name=item.metadata.name,
                 resource_version=item.metadata.resource_version,
@@ -80,17 +77,18 @@ def _process_and_store_resources(items, cluster_name, resource_type, namespace, 
                 full_resource_string=full_resource_str,
             )
             collection.insert_one(new_resource.model_dump())
-            print(f"Inserted new {resource_type} '{item.metadata.name}'" + (f" in '{namespace}'" if namespace else ""))
+            logger.info(f"Inserted new {resource_type} '{item.metadata.name}'" + (f" in '{namespace}'" if namespace else ""))
 
 def collect_resources():
     """Collects various Kubernetes resources from configured clusters and stores them in MongoDB."""
+    logger.info("Starting resource collection cycle...")
     resource_collection = get_resource_collection()
     audit_log_collection = get_audit_log_collection()
     api_client = ApiClient()
 
     for cluster in CLUSTERS:
         cluster_name = cluster["name"]
-        print(f"\nCollecting from {cluster_name}")
+        logger.info(f"Starting collection for cluster: {cluster_name}")
 
         configuration = client.Configuration()
         configuration.host = cluster["api_server"]
@@ -106,40 +104,48 @@ def collect_resources():
             "ApiextensionsV1Api": client.ApiextensionsV1Api(client.ApiClient(configuration)),
         }
 
-        # Handle cluster-scoped resources first
+        # Handle cluster-scoped resources
+        logger.info(f"Processing cluster-scoped resources for {cluster_name}...")
         for res_type in filter(lambda r: not r["namespaced"], RESOURCE_TYPES):
             try:
                 api_instance = api_map[res_type["api"]]
                 list_func = getattr(api_instance, res_type["list_func"])
                 resources = list_func()
+                logger.info(f"Found {len(resources.items)} {res_type['name']} resources in {cluster_name}.")
                 _process_and_store_resources(resources.items, cluster_name, res_type["name"], None, resource_collection, audit_log_collection, api_client)
             except ApiException as e:
-                print(f"Error fetching {res_type['name']} from {cluster_name}: {e.reason}")
+                logger.error(f"Error fetching {res_type['name']} from {cluster_name}: {e.reason}", exc_info=True)
             except Exception as e:
-                print(f"An unexpected error occurred while fetching {res_type['name']}: {e}")
+                logger.error(f"An unexpected error occurred fetching {res_type['name']}: {e}", exc_info=True)
 
         # Handle namespaced resources
         try:
             namespace_label_selector = cluster.get("namespace_label_selector", "")
+            logger.info(f"Fetching namespaces from {cluster_name} with selector: '{namespace_label_selector or 'None'}'")
             namespaces = api_map["CoreV1Api"].list_namespace(label_selector=namespace_label_selector)
+            logger.info(f"Found {len(namespaces.items)} namespaces to scan.")
         except ApiException as e:
-            print(f"Error fetching namespaces from {cluster_name}: {e.reason}")
-            continue
-        except Exception as e:
-            print(f"An unexpected error occurred while fetching namespaces: {e}")
+            logger.error(f"Error fetching namespaces from {cluster_name}: {e.reason}", exc_info=True)
             continue
 
         for ns in namespaces.items:
             namespace_name = ns.metadata.name
+            logger.debug(f"Scanning namespace: {namespace_name}")
             for res_type in filter(lambda r: r["namespaced"], RESOURCE_TYPES):
                 try:
                     api_instance = api_map[res_type["api"]]
                     list_func = getattr(api_instance, res_type["list_func"])
                     resources = list_func(namespace=namespace_name)
+                    if resources.items:
+                        logger.debug(f"Found {len(resources.items)} {res_type['name']} resources in {namespace_name}.")
                     _process_and_store_resources(resources.items, cluster_name, res_type["name"], namespace_name, resource_collection, audit_log_collection, api_client)
                 except ApiException as e:
-                    print(f"Error fetching {res_type['name']} from {namespace_name} in {cluster_name}: {e.reason}")
+                    # Log 403 (Forbidden) as a warning, others as errors
+                    if e.status == 403:
+                        logger.warning(f"Permission denied fetching {res_type['name']} from {namespace_name}: {e.reason}")
+                    else:
+                        logger.error(f"API Error fetching {res_type['name']} from {namespace_name}: {e.reason}", exc_info=True)
                 except Exception as e:
-                    print(f"An unexpected error occurred while fetching {res_type['name']} in {namespace_name}: {e}")
+                    logger.error(f"An unexpected error occurred fetching {res_type['name']} in {namespace_name}: {e}", exc_info=True)
 
-    print("\nResource collection complete.")
+    logger.info("Resource collection cycle complete.")

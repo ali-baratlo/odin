@@ -12,11 +12,12 @@ Odin is a powerful, containerized application designed to collect, store, and in
 - **RESTful API**: A robust FastAPI-powered API for all data operations.
 - **Configurable Scheduled Data Collection**: A background job runs periodically to keep the resource data up-to-date. The interval is configurable via an environment variable.
 - **Helm and CI/CD Ready**: Comes with a production-ready Helm chart and a complete GitLab CI/CD pipeline for automated deployments.
+- **Robust Logging and Startup**: Features detailed structured logging for easy debugging and a fail-fast mechanism that prevents the app from starting without a valid database connection.
 
 ## Technology Stack
 
 - **Frontend**: React, Vite, Axios
-- **Backend**: Python 3, FastAPI
+- **Backend**: Python 3, FastAPI, Loguru
 - **Database**: MongoDB
 - **Deployment**: Docker, Docker Compose, Helm
 - **CI/CD**: GitLab CI
